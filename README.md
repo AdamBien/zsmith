@@ -5,9 +5,9 @@ AI agent framework for Claude with tool execution support.
 ## Usage
 
 ```java
-var agent = new Agent("You are a helpful assistant.");
-agent.registerTool(new CalculatorTool());
-agent.registerTool(new CurrentTimeTool());
+var agent = new Agent("You are a helpful assistant.")
+        .withTool(new CalculatorTool())
+        .withTool(new CurrentTimeTool());
 
 var response = agent.chat("What is 42 * 17?");
 ```

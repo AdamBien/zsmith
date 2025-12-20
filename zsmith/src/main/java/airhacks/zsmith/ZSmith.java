@@ -14,9 +14,9 @@ public interface ZSmith {
                 Be concise in your responses.
                 """;
 
-        var agent = new Agent(systemPrompt);
-        agent.registerTool(new CalculatorTool());
-        agent.registerTool(new CurrentTimeTool());
+        var agent = new Agent(systemPrompt)
+                .withTool(new CalculatorTool())
+                .withTool(new CurrentTimeTool());
 
         System.out.println("Agent initialized with calculator and current_time tools");
         System.out.println("---");

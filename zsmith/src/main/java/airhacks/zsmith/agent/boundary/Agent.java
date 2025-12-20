@@ -44,8 +44,9 @@ public class Agent {
         this.temperature = DEFAULT_TEMPERATURE;
     }
 
-    public void registerTool(Tool tool) {
+    public Agent withTool(Tool tool) {
         this.tools.put(tool.name(), tool);
+        return this;
     }
 
     public String systemPrompt() {
