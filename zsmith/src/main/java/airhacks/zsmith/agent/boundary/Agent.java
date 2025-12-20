@@ -16,32 +16,28 @@ import airhacks.zsmith.tools.entity.ToolResult;
 import airhacks.zsmith.tools.entity.ToolUse;
 
 
-public class Agent {
+public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools, int maxIterations, float temperature) {
 
     static final String DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant.";
     static final int DEFAULT_MAX_ITERATIONS = 10;
     static final float DEFAULT_TEMPERATURE = 0.7f;
 
-    static{
+    static {
         ZCfg.load("zsmith");
     }
 
-    String systemPrompt;
-    Memory memory;
-    Map<String, Tool> tools;
-    int maxIterations;
-    float temperature;
+    public Agent(String systemPrompt) {
+        this(
+            systemPrompt != null ? systemPrompt : DEFAULT_SYSTEM_PROMPT,
+            new Memory(),
+            new HashMap<>(),
+            DEFAULT_MAX_ITERATIONS,
+            DEFAULT_TEMPERATURE
+        );
+    }
 
     public Agent() {
         this(DEFAULT_SYSTEM_PROMPT);
-    }
-
-    public Agent(String systemPrompt) {
-        this.systemPrompt = systemPrompt != null ? systemPrompt : DEFAULT_SYSTEM_PROMPT;
-        this.memory = new Memory();
-        this.tools = new HashMap<>();
-        this.maxIterations = DEFAULT_MAX_ITERATIONS;
-        this.temperature = DEFAULT_TEMPERATURE;
     }
 
     public Agent withTool(Tool tool) {
@@ -49,15 +45,7 @@ public class Agent {
         return this;
     }
 
-    public String systemPrompt() {
-        return this.systemPrompt;
-    }
-
-    public Memory memory() {
-        return this.memory;
-    }
-
-    public Map<String, Tool> tools() {
+    public Map<String, Tool> registeredTools() {
         return Map.copyOf(this.tools);
     }
 
