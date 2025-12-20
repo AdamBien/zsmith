@@ -10,10 +10,10 @@ import org.json.JSONArray;
 import airhacks.zcfg.ZCfg;
 import airhacks.zsmith.agent.entity.Memory;
 import airhacks.zsmith.agent.entity.Message;
-import airhacks.zsmith.agent.entity.Tool;
-import airhacks.zsmith.agent.entity.ToolResult;
-import airhacks.zsmith.agent.entity.ToolUse;
 import airhacks.zsmith.claude.control.Claude;
+import airhacks.zsmith.tools.control.Tool;
+import airhacks.zsmith.tools.entity.ToolResult;
+import airhacks.zsmith.tools.entity.ToolUse;
 
 
 public class Agent {

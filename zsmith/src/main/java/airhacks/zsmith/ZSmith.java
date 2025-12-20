@@ -1,8 +1,8 @@
 package airhacks.zsmith;
 
 import airhacks.zsmith.agent.boundary.Agent;
-import airhacks.zsmith.agent.entity.CalculatorTool;
-import airhacks.zsmith.agent.entity.CurrentTimeTool;
+import airhacks.zsmith.tools.control.CalculatorTool;
+import airhacks.zsmith.tools.control.CurrentTimeTool;
 
 public interface ZSmith {
 

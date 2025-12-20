@@ -1,4 +1,4 @@
-package airhacks.zsmith.agent.entity;
+package airhacks.zsmith.tools.entity;
 
 import org.json.JSONObject;
 
