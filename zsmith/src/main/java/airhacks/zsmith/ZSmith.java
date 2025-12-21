@@ -1,12 +1,11 @@
 package airhacks.zsmith;
 
 import airhacks.zsmith.agent.boundary.Agent;
+import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.tools.control.CalculatorTool;
 import airhacks.zsmith.tools.control.CurrentTimeTool;
 
 public interface ZSmith {
-
-    static final System.Logger LOGGER = System.getLogger(ZSmith.class.getName());
 
     static void main(String...args) {
         var systemPrompt = """
@@ -20,12 +19,12 @@ public interface ZSmith {
                 .withTool(new CalculatorTool())
                 .withTool(new CurrentTimeTool());
 
-        LOGGER.log(System.Logger.Level.INFO, "Agent initialized with calculator and current_time tools");
+        Log.INFO.out("Agent initialized with calculator and current_time tools");
 
         var question = "What is 42 multiplied by 17? Also, what time is it now?";
-        LOGGER.log(System.Logger.Level.INFO, "User: {0}", question);
+        Log.PROMPT.out("User: " + question);
 
         var response = agent.chat(question);
-        LOGGER.log(System.Logger.Level.INFO, "Agent: {0}", response);
+        Log.ANSWER.out("Agent: " + response);
     }
 }
