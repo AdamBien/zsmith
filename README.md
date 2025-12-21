@@ -1,5 +1,7 @@
 # zsmith
 
+![zsmith](smith.png)
+
 AI agent framework for Claude with tool execution support.
 
 ## Usage
