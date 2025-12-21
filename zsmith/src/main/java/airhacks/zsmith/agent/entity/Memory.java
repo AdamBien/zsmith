@@ -5,16 +5,14 @@ import java.util.List;
 
 import org.json.JSONArray;
 
-public class Memory {
+public record Memory(List<Message> messages) {
 
-    List<Message> messages;
-
-    public Memory() {
-        this.messages = new ArrayList<>();
+    public Memory {
+        messages = new ArrayList<>(messages);
     }
 
-    Memory(List<Message> messages) {
-        this.messages = new ArrayList<>(messages);
+    public Memory() {
+        this(new ArrayList<>());
     }
 
     public void addUserMessage(String content) {
@@ -37,7 +35,7 @@ public class Memory {
         return this.messages.size();
     }
 
-    public List<Message> messages() {
+    public List<Message> copyOfMessages() {
         return List.copyOf(this.messages);
     }
 
