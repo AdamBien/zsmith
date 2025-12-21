@@ -35,9 +35,6 @@ public record Memory(List<Message> messages) {
         return this.messages.size();
     }
 
-    public List<Message> copyOfMessages() {
-        return List.copyOf(this.messages);
-    }
 
     public JSONArray toJSON() {
         var array = new JSONArray();
