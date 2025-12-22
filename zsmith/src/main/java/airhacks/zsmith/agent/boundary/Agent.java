@@ -45,9 +45,6 @@ public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools,
         return this;
     }
 
-    public Map<String, Tool> registeredTools() {
-        return Map.copyOf(this.tools);
-    }
 
     JSONArray toolDefinitions() {
         var array = new JSONArray();
