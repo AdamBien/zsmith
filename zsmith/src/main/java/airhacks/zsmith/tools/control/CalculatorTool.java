@@ -1,6 +1,5 @@
 package airhacks.zsmith.tools.control;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 
 public class CalculatorTool implements Tool {
@@ -16,21 +15,22 @@ public class CalculatorTool implements Tool {
     }
 
     @Override
-    public JSONObject inputSchema() {
-        return new JSONObject()
-                .put("type", "object")
-                .put("properties", new JSONObject()
-                        .put("operation", new JSONObject()
-                                .put("type", "string")
-                                .put("enum", new JSONArray().put("add").put("subtract").put("multiply").put("divide"))
-                                .put("description", "The arithmetic operation to perform"))
-                        .put("a", new JSONObject()
-                                .put("type", "number")
-                                .put("description", "First operand"))
-                        .put("b", new JSONObject()
-                                .put("type", "number")
-                                .put("description", "Second operand")))
-                .put("required", new JSONArray().put("operation").put("a").put("b"));
+    public String inputSchema() {
+        return """
+                {
+                    "type": "object",
+                    "properties": {
+                        "operation": {
+                            "type": "string",
+                            "enum": ["add", "subtract", "multiply", "divide"],
+                            "description": "The arithmetic operation to perform"
+                        },
+                        "a": { "type": "number", "description": "First operand" },
+                        "b": { "type": "number", "description": "Second operand" }
+                    },
+                    "required": ["operation", "a", "b"]
+                }
+                """;
     }
 
     @Override

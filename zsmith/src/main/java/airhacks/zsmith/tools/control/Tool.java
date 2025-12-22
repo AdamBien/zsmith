@@ -8,7 +8,7 @@ public interface Tool {
 
     String description();
 
-    JSONObject inputSchema();
+    String inputSchema();
 
     String execute(JSONObject input);
 
@@ -16,6 +16,6 @@ public interface Tool {
         return new JSONObject()
                 .put("name", name())
                 .put("description", description())
-                .put("input_schema", inputSchema());
+                .put("input_schema", new JSONObject(inputSchema()));
     }
 }

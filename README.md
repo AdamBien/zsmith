@@ -29,12 +29,16 @@ public class MyTool implements Tool {
         return "Does something useful";
     }
 
-    public JSONObject inputSchema() {
-        return new JSONObject()
-            .put("type", "object")
-            .put("properties", new JSONObject()
-                .put("param", new JSONObject().put("type", "string")))
-            .put("required", new JSONArray().put("param"));
+    public String inputSchema() {
+        return """
+            {
+                "type": "object",
+                "properties": {
+                    "param": { "type": "string", "description": "Parameter description" }
+                },
+                "required": ["param"]
+            }
+            """;
     }
 
     public String execute(JSONObject input) {

@@ -18,10 +18,13 @@ public class CurrentTimeTool implements Tool {
     }
 
     @Override
-    public JSONObject inputSchema() {
-        return new JSONObject()
-                .put("type", "object")
-                .put("properties", new JSONObject());
+    public String inputSchema() {
+        return """
+                {
+                    "type": "object",
+                    "properties": {}
+                }
+                """;
     }
 
     @Override
