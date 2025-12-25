@@ -45,6 +45,14 @@ public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools,
         return this;
     }
 
+    public Agent withMaxIterations(int maxIterations) {
+        return new Agent(this.systemPrompt, this.memory, this.tools, maxIterations, this.temperature);
+    }
+
+    public Agent withTemperature(float temperature) {
+        return new Agent(this.systemPrompt, this.memory, this.tools, this.maxIterations, temperature);
+    }
+
 
     JSONArray toolDefinitions() {
         var array = new JSONArray();
