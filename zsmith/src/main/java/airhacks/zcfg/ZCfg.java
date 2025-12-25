@@ -74,6 +74,14 @@ public class ZCfg {
         return CACHE.getProperty(key, defaultValue);
     }
 
+    public static String requiredString(String key) {
+        var value = string(key);
+        if (value == null || value.isBlank()) {
+            throw new IllegalStateException("Missing required configuration: '" + key + "'");
+        }
+        return value;
+    }
+
     public static int integer(String key, int defaultValue) {
         if (CACHE == null)
             throw new IllegalStateException("Call ZCfg.load(appName) first");

@@ -24,16 +24,6 @@ public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools,
 
     static {
         ZCfg.load("zsmith");
-        var apiKey = ZCfg.string("anthropic.api.key");
-        var version = ZCfg.string("anthropic.version");
-        if (apiKey == null || apiKey.isBlank()) {
-            System.err.println("Missing configuration: 'anthropic.api.key' not set");
-            System.exit(1);
-        }
-        if (version == null || version.isBlank()) {
-            System.err.println("Missing configuration: 'anthropic.version' not set");
-            System.exit(1);
-        }
     }
 
     public Agent(String systemPrompt) {
