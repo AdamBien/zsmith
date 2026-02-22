@@ -27,8 +27,10 @@ public class ZCfg {
 
     static final String PROPERTIES_FILE = "app.properties";
     static Properties CACHE;
+    static String APP_NAME;
 
     public static void load(String appName) {
+        APP_NAME = appName;
         CACHE = loadProperties(appName);
     }
 
@@ -52,6 +54,20 @@ public class ZCfg {
         properties.putAll(System.getProperties());
 
         return properties;
+    }
+
+    public static void override(String subfolder) {
+        if (CACHE == null)
+            throw new IllegalStateException("Call ZCfg.load(appName) first");
+        var userHome = System.getProperty("user.home");
+        var globalAgentConfig = Path.of(userHome, "." + APP_NAME, subfolder, PROPERTIES_FILE);
+        if (Files.exists(globalAgentConfig)) {
+            loadFromFile(globalAgentConfig, CACHE);
+        }
+        var localAgentConfig = Path.of(subfolder, PROPERTIES_FILE);
+        if (Files.exists(localAgentConfig)) {
+            loadFromFile(localAgentConfig, CACHE);
+        }
     }
 
     static void loadFromFile(Path file, Properties properties) {

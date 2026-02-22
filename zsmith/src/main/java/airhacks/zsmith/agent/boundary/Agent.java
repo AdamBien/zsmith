@@ -36,6 +36,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             DEFAULT_MAX_ITERATIONS,
             DEFAULT_TEMPERATURE
         );
+        ZCfg.override(this.name);
     }
 
     public Agent(String systemPrompt) {
