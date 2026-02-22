@@ -6,7 +6,6 @@ import airhacks.zsmith.tools.control.CalculatorTool;
 import airhacks.zsmith.tools.control.CurrentTimeTool;
 
 public interface ZSmith {
-
     static void main(String...args) {
         var systemPrompt = """
                 You are a helpful assistant with access to tools.

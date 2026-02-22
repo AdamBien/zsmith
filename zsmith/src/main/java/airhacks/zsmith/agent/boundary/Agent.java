@@ -11,12 +11,14 @@ import airhacks.zcfg.ZCfg;
 import airhacks.zsmith.agent.entity.Memory;
 import airhacks.zsmith.agent.entity.Message;
 import airhacks.zsmith.claude.control.Claude;
+import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.tools.control.Tool;
 import airhacks.zsmith.tools.entity.ToolResult;
 import airhacks.zsmith.tools.entity.ToolUse;
 
 
 public record Agent(String name, String systemPrompt, Memory memory, Map<String, Tool> tools, int maxIterations, float temperature) {
+    static final String version ="2026.02.22.01";
 
     static final String DEFAULT_NAME = "zsmith";
     static final String DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant.";
@@ -24,6 +26,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     static final float DEFAULT_TEMPERATURE = 0.7f;
 
     static {
+        Log.user("zsmith v" + version);
         ZCfg.load("zsmith");
     }
 
