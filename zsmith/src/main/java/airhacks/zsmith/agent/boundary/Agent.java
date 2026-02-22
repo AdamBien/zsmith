@@ -16,8 +16,9 @@ import airhacks.zsmith.tools.entity.ToolResult;
 import airhacks.zsmith.tools.entity.ToolUse;
 
 
-public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools, int maxIterations, float temperature) {
+public record Agent(String name, String systemPrompt, Memory memory, Map<String, Tool> tools, int maxIterations, float temperature) {
 
+    static final String DEFAULT_NAME = "zsmith";
     static final String DEFAULT_SYSTEM_PROMPT = "You are a helpful assistant.";
     static final int DEFAULT_MAX_ITERATIONS = 10;
     static final float DEFAULT_TEMPERATURE = 0.7f;
@@ -26,8 +27,9 @@ public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools,
         ZCfg.load("zsmith");
     }
 
-    public Agent(String systemPrompt) {
+    public Agent(String name, String systemPrompt) {
         this(
+            name != null ? name : DEFAULT_NAME,
             systemPrompt != null ? systemPrompt : DEFAULT_SYSTEM_PROMPT,
             new Memory(),
             new HashMap<>(),
@@ -36,8 +38,12 @@ public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools,
         );
     }
 
+    public Agent(String systemPrompt) {
+        this(DEFAULT_NAME, systemPrompt);
+    }
+
     public Agent() {
-        this(DEFAULT_SYSTEM_PROMPT);
+        this(DEFAULT_NAME, DEFAULT_SYSTEM_PROMPT);
     }
 
     public Agent withTool(Tool tool) {
@@ -46,11 +52,11 @@ public record Agent(String systemPrompt, Memory memory, Map<String, Tool> tools,
     }
 
     public Agent withMaxIterations(int maxIterations) {
-        return new Agent(this.systemPrompt, this.memory, this.tools, maxIterations, this.temperature);
+        return new Agent(this.name, this.systemPrompt, this.memory, this.tools, maxIterations, this.temperature);
     }
 
     public Agent withTemperature(float temperature) {
-        return new Agent(this.systemPrompt, this.memory, this.tools, this.maxIterations, temperature);
+        return new Agent(this.name, this.systemPrompt, this.memory, this.tools, this.maxIterations, temperature);
     }
 
 
