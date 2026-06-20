@@ -352,14 +352,21 @@ public interface Claude {
                 .header("content-type", "application/json");
         if (currentModel.wire() == Wire.OPENAI) {
             builder.header("Authorization", "Bearer " + apiKey());
+            // OpenAI-format hosts (e.g. Bedrock Mantle's Chat Completions route) reject
+            // anthropic-workspace-id and expect openai-project instead; reuse the workspace
+            // id when no dedicated openai.project is set so one properties file serves both.
+            var project = ZCfg.string("openai.project", ZCfg.string("anthropic.workspace.id", null));
+            if (project != null && !project.isBlank()) {
+                builder.header("openai-project", project);
+            }
         } else {
             var authHeader = ZCfg.string("anthropic.auth.header", "x-api-key");
             builder.header(authHeader, apiKey())
                     .header("anthropic-version", apiVersion());
-        }
-        var workspaceId = ZCfg.string("anthropic.workspace.id", null);
-        if (workspaceId != null && !workspaceId.isBlank()) {
-            builder.header("anthropic-workspace-id", workspaceId);
+            var workspaceId = ZCfg.string("anthropic.workspace.id", null);
+            if (workspaceId != null && !workspaceId.isBlank()) {
+                builder.header("anthropic-workspace-id", workspaceId);
+            }
         }
         var request = builder.build();
         try {
