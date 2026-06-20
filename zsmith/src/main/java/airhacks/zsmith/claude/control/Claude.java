@@ -60,6 +60,35 @@ public interface Claude {
         return ZCfg.requiredString("bedrock.region");
     }
 
+    /// A single Bedrock-namespaced project/workspace id mapped to whichever header the active
+    /// wire expects — `anthropic-workspace-id` on the Messages route, `openai-project` on the
+    /// Chat Completions route — so one properties file serves both Bedrock model families when
+    /// the model (and thus the wire) is flipped. Used only as a fallback behind the wire-native
+    /// `anthropic.workspace.id` / `openai.project` keys, mirroring how `bedrock.api.key` falls
+    /// back from `anthropic.api.key`.
+    static String bedrockProjectId() {
+        return ZCfg.string("bedrock.project.id", null);
+    }
+
+    /// The project/workspace HTTP header carried alongside the auth credentials.
+    record ProjectHeader(String name, String value) {}
+
+    /// Resolves the project/workspace header for the given wire, or empty when unconfigured.
+    /// The header *name* is dictated by the wire — Bedrock Mantle's Messages route expects
+    /// `anthropic-workspace-id` and rejects `openai-project`, while its Chat Completions route
+    /// expects the opposite. The *value* comes from the wire-native key
+    /// (`anthropic.workspace.id` / `openai.project`), falling back to the shared
+    /// [#bedrockProjectId()] so one properties file serves both Bedrock model families.
+    static Optional<ProjectHeader> projectHeader(Wire wire) {
+        var name = wire == Wire.OPENAI ? "openai-project" : "anthropic-workspace-id";
+        var key = wire == Wire.OPENAI ? "openai.project" : "anthropic.workspace.id";
+        var value = ZCfg.string(key, bedrockProjectId());
+        if (value == null || value.isBlank()) {
+            return Optional.empty();
+        }
+        return Optional.of(new ProjectHeader(name, value));
+    }
+
     enum Capability { TEMPERATURE, EFFORT, ADAPTIVE_THINKING }
 
     /// The HTTP wire format a model speaks. `ANTHROPIC` is the native Messages API
@@ -352,22 +381,13 @@ public interface Claude {
                 .header("content-type", "application/json");
         if (currentModel.wire() == Wire.OPENAI) {
             builder.header("Authorization", "Bearer " + apiKey());
-            // OpenAI-format hosts (e.g. Bedrock Mantle's Chat Completions route) reject
-            // anthropic-workspace-id and expect openai-project instead; reuse the workspace
-            // id when no dedicated openai.project is set so one properties file serves both.
-            var project = ZCfg.string("openai.project", ZCfg.string("anthropic.workspace.id", null));
-            if (project != null && !project.isBlank()) {
-                builder.header("openai-project", project);
-            }
         } else {
             var authHeader = ZCfg.string("anthropic.auth.header", "x-api-key");
             builder.header(authHeader, apiKey())
                     .header("anthropic-version", apiVersion());
-            var workspaceId = ZCfg.string("anthropic.workspace.id", null);
-            if (workspaceId != null && !workspaceId.isBlank()) {
-                builder.header("anthropic-workspace-id", workspaceId);
-            }
         }
+        projectHeader(currentModel.wire())
+                .ifPresent(header -> builder.header(header.name(), header.value()));
         var request = builder.build();
         try {
             return client.send(request, BodyHandlers.ofString());

@@ -259,6 +259,7 @@ When `llm.provider=bedrock`, zsmith derives:
 - **endpoint** → `https://bedrock-mantle.<region>.api.aws/anthropic/v1/messages`
 - **anthropic-version** → `2023-06-01` (override with `anthropic.version` if needed)
 - **API key** → `bedrock.api.key`, falling back to `anthropic.api.key` when unset
+- **project header** → `bedrock.project.id`, mapped to whichever header the active wire accepts — `anthropic-workspace-id` on the Messages route, `openai-project` on the Chat Completions route (see below)
 - **model prefix** → a **bare** `claude.model` gets the `anthropic.` prefix, so `claude.model=claude-haiku-4-5` resolves to `anthropic.claude-haiku-4-5`
 
 The same bare `claude.model` therefore works under both providers — used as-is for native Anthropic, `anthropic.`-prefixed under Bedrock. An id that already contains a `.` (e.g. `anthropic.claude-haiku-4-5`) is used verbatim. The 529→fallback retry is Anthropic-specific and does not apply to Bedrock model ids.
@@ -280,7 +281,10 @@ For such models zsmith derives:
 
 - **endpoint** → `https://bedrock-mantle.<region>.api.aws/v1/chat/completions` (not `/anthropic/v1/messages`)
 - **auth** → `Authorization: Bearer <bedrock.api.key>`
+- **project header** → `openai-project` (this route **rejects** `anthropic-workspace-id`), sourced from `openai.project` or `bedrock.project.id`
 - **request/response** → translated to and from the OpenAI Chat Completions shape, so the Agent loop still sees Anthropic-shaped content blocks and `tool_use`
+
+> **One project id, both wires.** Set `bedrock.project.id` once and zsmith emits the header the active route accepts — `anthropic-workspace-id` for Anthropic models, `openai-project` for OpenAI-compatible ones like Nemotron — so flipping `claude.model` needs no other change. The wire-native keys `anthropic.workspace.id` / `openai.project` still override it when set. (Setting `anthropic.workspace.id` while running a Nemotron model is what triggers Bedrock's `The anthropic-workspace-id header is not supported for this API format` error — use `bedrock.project.id` instead.)
 
 > **Region matters.** This model is offered only in specific regions, and the set changes over time — a region that works today may not be the one in your existing Bedrock config. If you get a "model isn't supported"/availability error, check the current regions on the [model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-nvidia-nemotron-super-3-120b.html) and set `bedrock.region` accordingly.
 
