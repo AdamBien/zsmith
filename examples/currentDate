@@ -1,4 +1,4 @@
-#!/usr/bin/java --enable-native-access=ALL-UNNAMED --class-path=../zsmith/zbo/zsmith.jar:./zsmith/zbo/lightmetal.jar --source 25
+#!/usr/bin/java --enable-native-access=ALL-UNNAMED --class-path=../zsmith/zbo/zsmith.jar:../zsmith/zbo/lightmetal.jar --source 25
 
 
 import java.time.LocalDate;
