@@ -11,17 +11,52 @@ import java.time.Duration;
 
 import org.json.JSONObject;
 
+import airhacks.zsmith.configuration.control.HttpTimeouts;
+
 public interface FetchUrlTool {
 
-    int CONNECT_TIMEOUT_SECONDS = 10;
-    int REQUEST_TIMEOUT_SECONDS = 15;
+    /// Deliberately shorter than the LLM transport timeouts: a page fetch should fail fast
+    /// rather than block a tool turn. Overridable as ISO-8601 durations via `fetch.connect.timeout`
+    /// and `fetch.request.timeout`. The errors — including timeouts — are returned as the tool
+    /// result string, not thrown, so the model can react to them.
+    Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(15);
     int MAX_BODY_LENGTH = 20_000;
     String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-    HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
-            .followRedirects(Redirect.NORMAL)
-            .build();
+    static Duration connectTimeout() {
+        return HttpTimeouts.duration("fetch.connect.timeout", DEFAULT_CONNECT_TIMEOUT);
+    }
+
+    static Duration requestTimeout() {
+        return HttpTimeouts.duration("fetch.request.timeout", DEFAULT_REQUEST_TIMEOUT);
+    }
+
+    /// Built lazily so the configured connect timeout is read on first fetch, after config is
+    /// loaded — never at interface initialization (which `create()` would trigger too early).
+    static HttpClient client() {
+        return Holder.instance();
+    }
+
+    final class Holder {
+        private static volatile HttpClient instance;
+
+        static HttpClient instance() {
+            var current = instance;
+            if (current != null) {
+                return current;
+            }
+            synchronized (Holder.class) {
+                if (instance == null) {
+                    instance = HttpClient.newBuilder()
+                            .connectTimeout(connectTimeout())
+                            .followRedirects(Redirect.NORMAL)
+                            .build();
+                }
+                return instance;
+            }
+        }
+    }
 
     enum Field { url }
 
@@ -54,13 +89,13 @@ public interface FetchUrlTool {
         try {
             var request = HttpRequest.newBuilder()
                     .uri(uri)
-                    .timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
+                    .timeout(requestTimeout())
                     .header("User-Agent", USER_AGENT)
                     .header("Accept", "*/*")
                     .GET()
                     .build();
 
-            var response = HTTP_CLIENT.send(request, HttpResponse.BodyHandlers.ofString());
+            var response = client().send(request, HttpResponse.BodyHandlers.ofString());
 
             var statusCode = response.statusCode();
             var contentType = response.headers()

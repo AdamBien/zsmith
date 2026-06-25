@@ -12,16 +12,51 @@ import java.time.Duration;
 
 import org.json.JSONObject;
 
+import airhacks.zsmith.configuration.control.HttpTimeouts;
+
 public interface LinkCheckerTool {
 
-    int CONNECT_TIMEOUT_SECONDS = 10;
-    int REQUEST_TIMEOUT_SECONDS = 10;
+    /// Deliberately shorter than the LLM transport timeouts: a reachability check should fail fast
+    /// rather than block a tool turn. Overridable as ISO-8601 durations via `link.connect.timeout`
+    /// and `link.request.timeout`. The errors — including timeouts — are returned as the tool
+    /// result string, not thrown, so the model can react to them.
+    Duration DEFAULT_CONNECT_TIMEOUT = Duration.ofSeconds(10);
+    Duration DEFAULT_REQUEST_TIMEOUT = Duration.ofSeconds(10);
     String USER_AGENT = "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36";
 
-    HttpClient HTTP_CLIENT = HttpClient.newBuilder()
-            .connectTimeout(Duration.ofSeconds(CONNECT_TIMEOUT_SECONDS))
-            .followRedirects(Redirect.NORMAL)
-            .build();
+    static Duration connectTimeout() {
+        return HttpTimeouts.duration("link.connect.timeout", DEFAULT_CONNECT_TIMEOUT);
+    }
+
+    static Duration requestTimeout() {
+        return HttpTimeouts.duration("link.request.timeout", DEFAULT_REQUEST_TIMEOUT);
+    }
+
+    /// Built lazily so the configured connect timeout is read on first check, after config is
+    /// loaded — never at interface initialization (which `create()` would trigger too early).
+    static HttpClient client() {
+        return Holder.instance();
+    }
+
+    final class Holder {
+        private static volatile HttpClient instance;
+
+        static HttpClient instance() {
+            var current = instance;
+            if (current != null) {
+                return current;
+            }
+            synchronized (Holder.class) {
+                if (instance == null) {
+                    instance = HttpClient.newBuilder()
+                            .connectTimeout(connectTimeout())
+                            .followRedirects(Redirect.NORMAL)
+                            .build();
+                }
+                return instance;
+            }
+        }
+    }
 
     enum Field { url }
 
@@ -72,12 +107,12 @@ public interface LinkCheckerTool {
     private static HttpResponse<Void> send(URI uri, String method) throws IOException, InterruptedException {
         var request = HttpRequest.newBuilder()
                 .uri(uri)
-                .timeout(Duration.ofSeconds(REQUEST_TIMEOUT_SECONDS))
+                .timeout(requestTimeout())
                 .header("User-Agent", USER_AGENT)
                 .header("Accept", "*/*")
                 .method(method, HttpRequest.BodyPublishers.noBody())
                 .build();
-        return HTTP_CLIENT.send(request, BodyHandlers.discarding());
+        return client().send(request, BodyHandlers.discarding());
     }
 
     private static String format(HttpResponse<?> response) {
