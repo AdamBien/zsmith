@@ -2,7 +2,6 @@ package airhacks.zsmith.openai.control;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
@@ -11,13 +10,12 @@ import java.net.http.HttpResponse.BodyHandlers;
 import org.json.JSONArray;
 import org.json.JSONObject;
 
+import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
 
 public interface OpenAI {
-
-    HttpClient client = HttpClient.newHttpClient();
 
     static URI endpoint() {
         var scheme = ZCfg.string("openai.scheme", "https");
@@ -257,6 +255,7 @@ public interface OpenAI {
     static HttpResponse<String> send(String payload) {
         Log.agent("using openai model: %s".formatted(model()));
         var builder = HttpRequest.newBuilder(endpoint())
+                .timeout(HttpTimeouts.requestTimeout())
                 .POST(BodyPublishers.ofString(payload))
                 .header("content-type", "application/json");
         var key = apiKey();
@@ -264,7 +263,7 @@ public interface OpenAI {
             builder.header("Authorization", "Bearer " + key);
         }
         try {
-            return client.send(builder.build(), BodyHandlers.ofString());
+            return HttpTimeouts.client().send(builder.build(), BodyHandlers.ofString());
         } catch (IOException | InterruptedException e) {
             Log.error(e.getMessage());
             throw new IllegalStateException("cannot communicate with openai endpoint", e);

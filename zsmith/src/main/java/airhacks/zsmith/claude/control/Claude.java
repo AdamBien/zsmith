@@ -2,7 +2,6 @@ package airhacks.zsmith.claude.control;
 
 import java.io.IOException;
 import java.net.URI;
-import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
@@ -14,6 +13,7 @@ import org.json.JSONArray;
 import org.json.JSONObject;
 
 import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
+import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.control.OpenAI;
@@ -162,7 +162,6 @@ public interface Claude {
         }
     }
 
-    HttpClient client = HttpClient.newHttpClient();
     Models currentModel = selectedModel();
 
     /// Resolves the active model from the `claude.model` configuration first, then the `-Dmodel`
@@ -377,6 +376,7 @@ public interface Claude {
         var uri = endpoint();
         Log.agent("claude endpoint: " + uri);
         var builder = HttpRequest.newBuilder(uri)
+                .timeout(HttpTimeouts.requestTimeout())
                 .POST(BodyPublishers.ofString(message))
                 .header("content-type", "application/json");
         if (currentModel.wire() == Wire.OPENAI) {
@@ -390,7 +390,7 @@ public interface Claude {
                 .ifPresent(header -> builder.header(header.name(), header.value()));
         var request = builder.build();
         try {
-            return client.send(request, BodyHandlers.ofString());
+            return HttpTimeouts.client().send(request, BodyHandlers.ofString());
         } catch (IOException | InterruptedException e) {
             Log.error(e.getMessage());
             throw new IllegalStateException("cannot communicate with claude", e);
