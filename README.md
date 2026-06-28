@@ -509,6 +509,10 @@ Open `calculator.jfr` in JDK Mission Control and filter the event browser by cat
 
 For a focused recording, pass a custom `.jfc` file enabling only the `airhacks.zsmith.*` events via `settings=zsmith.jfc`.
 
+## Benchmarks
+
+The [`benchmarks/`](benchmarks/) directory holds executable agent benchmarks that score loop-following and tool-calling capability against known ground truth — no LLM judge. [`agentLoopBenchmark`](benchmarks/agentLoopBenchmark) drives an agent through a seeded *pointer-chasing* chain of configurable depth and reports `PASS`/`FAIL` plus the tool-call count. See [`benchmarks/README.md`](benchmarks/README.md) for the mechanism and depth-sweep usage.
+
 ## Skills
 
 Skills are reusable prompt snippets stored as `SKILL.md` files. Each skill uses frontmatter for metadata:
