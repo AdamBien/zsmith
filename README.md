@@ -511,7 +511,7 @@ For a focused recording, pass a custom `.jfc` file enabling only the `airhacks.z
 
 ## Benchmarks
 
-The [`benchmarks/`](benchmarks/) directory holds executable agent benchmarks that score loop-following and tool-calling capability against known ground truth — no LLM judge. [`agentLoopBenchmark`](benchmarks/agentLoopBenchmark) drives an agent through a seeded *pointer-chasing* chain of configurable depth and reports `PASS`/`FAIL` plus the tool-call count. See [`benchmarks/README.md`](benchmarks/README.md) for the mechanism and depth-sweep usage.
+The [`benchmarks/`](benchmarks/) directory holds executable agent benchmarks that score tool-calling behavior against seeded ground truth — no LLM judge — along orthogonal axes whose results can disagree. [`agentLoopBenchmark`](benchmarks/agentLoopBenchmark) drives an agent through a *pointer-chasing* chain (serial loop-following) and reports `PASS`/`FAIL` plus the tool-call count. [`agentParallelismBenchmark`](benchmarks/agentParallelismBenchmark) gives the agent independent lookups and measures whether it *batches* them into one turn or serializes them (efficiency = calls vs turns) — the inverse axis. See [`benchmarks/README.md`](benchmarks/README.md) for mechanisms and sweep usage.
 
 ## Skills
 

@@ -18,7 +18,15 @@
  * hops in order; one skipped or reordered hop corrupts the reconstructed secret, making the
  * outcome an objective pass/fail rather than a judged answer.
  *
- * <p>The single entry point is {@link airhacks.zsmith.benchmark.boundary.PointerChasingBenchmark}:
+ * <p>{@link airhacks.zsmith.benchmark.boundary.PointerChasingBenchmark} is the first mechanism:
  * compose its {@code tool()} into an {@code Agent}, run it, and {@code score()} the reply.
+ *
+ * <p>The package holds sibling mechanisms that each probe a different agent axis.
+ * {@link airhacks.zsmith.benchmark.boundary.ParallelDiscriminationBenchmark} is the inverse of
+ * pointer chasing: it presents <em>independent</em> lookups (every key known up front, no data
+ * dependency) and measures whether the agent <em>batches</em> them into one turn or needlessly
+ * serializes them. Its tool runs in parallel and gauges its own concurrency, so the metric is
+ * efficiency (calls vs turns) rather than a correctness match — a capability that can disagree
+ * with loop-following, which is what makes it worth measuring separately.
  */
 package airhacks.zsmith.benchmark;
