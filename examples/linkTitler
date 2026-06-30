@@ -1,0 +1,27 @@
+#!/usr/bin/java --enable-native-access=ALL-UNNAMED -Dtools.permissions.default=allow --class-path=../zsmith/zbo/zsmith.jar:./zsmith/zbo/lightmetal.jar --source 25
+
+import airhacks.zsmith.agent.boundary.Agent;
+import airhacks.zsmith.tools.boundary.Tools;
+
+void main() {
+
+var linkTitler = new Agent("linkTitler", """
+You turn a list of links into an annotated "link - description" list.
+
+1. Use the read_clipboard tool to read the links (one URL per line).
+2. For every link, use the fetch_url tool to load the page and derive a
+   short, descriptive title (prefer the page's <title>, condensed to a
+   few words). If a page is unreachable, describe it as "unreachable".
+3. Build a plain-text list, one entry per line, formatted exactly as:
+   <link> - <short description>
+   Preserve the original order of the links.
+4. Use the write_clipboard tool to write the finished list back to the
+   clipboard.
+
+Be concise. Keep each description to a handful of words.
+""")
+.withTools(Tools.READ_CLIPBOARD, Tools.FETCH_URL, Tools.WRITE_CLIPBOARD)
+.withMaxIterations(40);
+
+IO.println(linkTitler.act());
+}
