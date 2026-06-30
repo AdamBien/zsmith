@@ -19,8 +19,18 @@ All examples expect `zsmith.jar` and `lightmetal.jar` on the classpath (resolved
 | [`fileCalculator`](fileCalculator) | File I/O tools (`READ_ANY_FILE`, `WRITE_ANY_FILE`) — read an expression from a file, compute, write the result back. |
 | [`transcriber`](transcriber) | Sub-agent delegation (`withSubAgent`) plus persistent episodic memory (`withEpisodicMemory`) over a podcast-transcript workflow. |
 | [`linkTitler`](linkTitler) | A delegating agent that hands each URL to a `link_labeler` sub-agent, keeping fetched page content out of the parent's context. Reads/writes the clipboard. |
-| [`assistant`](assistant) | A fully loaded agent — every built-in tool (`withAllTools`), episodic memory, and the full skill catalog (`withSkills`) — served over HTTP (`withHttpServer`). |
-| [`zschat`](zschat) | A standalone TUI chat (`Chat`) with no custom agent, served on a configurable port. |
+| [`assistant`](assistant) + [`zschat`](zschat) | A client/server pair: `assistant` is a fully loaded agent — every built-in tool (`withAllTools`), episodic memory, and the full skill catalog (`withSkills`) — served over HTTP (`withHttpServer`); `zschat` (zsmith chat) is the TUI chat client (`Chat`) that connects to it. See below. |
+
+## Running `assistant` + `zschat`
+
+`assistant` and `zschat` form a server/client pair. Start the agent server first, then connect the TUI client to the same port:
+
+```sh
+./assistant 8080   # serves the fully loaded agent over HTTP on :8080
+./zschat   8080    # TUI chat client connecting to the same port
+```
+
+Both default to port `8080` when no argument is given.
 
 ## Common building blocks
 
