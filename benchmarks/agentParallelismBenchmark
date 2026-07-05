@@ -21,5 +21,8 @@ void main(String... args) {
 
     var result = benchmark.score(agent.chat("go"));
 
-    IO.println(result.summary());
+    // one normalized markdown row on stdout — paste into the summary table in README.md;
+    // maxConcurrency and the correctness gate go to stderr so they never end up in the table
+    IO.println(result.markdownRow());
+    System.err.println(result.diagnostics());
 }

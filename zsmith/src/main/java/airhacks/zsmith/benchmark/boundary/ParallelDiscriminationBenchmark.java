@@ -23,7 +23,7 @@ import airhacks.zsmith.tools.control.ToolHandler;
  *         .withTool(benchmark.tool())
  *         .withMaxIterations(28);
  * var result = benchmark.score(agent.chat("go"));
- * IO.println(result.summary());
+ * IO.println(result.markdownRow());
  * }</pre>
  */
 public class ParallelDiscriminationBenchmark {

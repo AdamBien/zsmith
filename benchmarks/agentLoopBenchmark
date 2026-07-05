@@ -22,5 +22,11 @@ void main(String... args) {
 
     var result = benchmark.score(agent.chat("go"));
 
-    IO.println(result.summary());
+    // one normalized markdown row on stdout — paste into the summary table in README.md;
+    // failure details go to stderr so they never end up in the table
+    IO.println(result.markdownRow());
+    var diagnostics = result.diagnostics();
+    if (!diagnostics.isEmpty()) {
+        System.err.println(diagnostics);
+    }
 }

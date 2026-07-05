@@ -1,15 +1,22 @@
 package airhacks.zsmith.benchmark.entity;
 
 /**
- * Outcome of a single benchmark run. {@code toolCalls} vs {@code depth} reveals whether
+ * Outcome of a single pointer-chasing run. {@code toolCalls} vs {@code depth} reveals whether
  * the agent walked the chain exactly (efficiency); {@code passed} reflects whether the
- * reconstructed secret matched (correctness).
+ * reconstructed secret matched (correctness). Renders to the shared {@link BenchmarkRow}
+ * columns; the expected/actual mismatch is kept out of the row and exposed via
+ * {@link #diagnostics()} for stderr.
  */
 public record BenchmarkResult(int depth, int toolCalls, boolean passed, String expected, String actual) {
 
-    public String summary() {
-        var status = this.passed ? "PASS" : "FAIL";
-        var detail = this.passed ? "" : " expected=" + this.expected + " actual=" + this.actual;
-        return "%s depth=%d toolCalls=%d/%d%s".formatted(status, this.depth, this.toolCalls, this.depth, detail);
+    public String markdownRow() {
+        return new BenchmarkRow("loop", this.depth, this.toolCalls, "–", this.passed).markdown();
+    }
+
+    public String diagnostics() {
+        if (this.passed) {
+            return "";
+        }
+        return "toolCalls=%d/%d expected=%s actual=%s".formatted(this.toolCalls, this.depth, this.expected, this.actual);
     }
 }

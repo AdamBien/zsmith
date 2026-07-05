@@ -5,6 +5,29 @@ seeded ground truth — no LLM judge. Each script builds a hidden task, runs a z
 against it, and prints a one-line result. The benchmarks target **orthogonal axes** so their
 results can disagree: a model can pass one and fail another.
 
+## Results
+
+Every run prints exactly one normalized markdown table row on stdout — same columns for
+every benchmark — so after a run (or a sweep) the rows paste directly into this table.
+Failure details and extra signals go to stderr, never into the row.
+
+| Benchmark | Size | Calls | Turns | Result |
+|-----------|------|-------|-------|--------|
+| loop | 50 | 50 | – | PASS |
+| parallelism | 8 | 8 | 1 | PASS |
+
+- **Benchmark** — `loop` (pointer chasing) or `parallelism` (parallel discrimination)
+- **Size** — the task size knob: chain `depth` for loop, independent `tasks` for parallelism
+- **Calls** — total tool calls the agent issued
+- **Turns** — agent turns that issued tool calls; loop does not track turns (`–`)
+- **Result** — `PASS`/`FAIL`: secret match (loop), all values retrieved (parallelism)
+
+A sweep appends ready-to-paste rows:
+
+```
+for d in 10 25 50 100 200; do ./agentLoopBenchmark $d; done
+```
+
 ## Prerequisites
 
 Java 25+, and a built zsmith. The scripts load `../zsmith/zbo/zsmith.jar` and `lightmetal.jar`,
@@ -39,13 +62,13 @@ for d in 10 25 50 100 200; do ./agentLoopBenchmark $d; done
 ```
 
 ```
-PASS depth=50 toolCalls=50/50
-FAIL depth=100 toolCalls=63/100 expected=... actual=...
+| loop | 50 | 50 | – | PASS |
+| loop | 100 | 63 | – | FAIL |
 ```
 
-`toolCalls=X/depth`: `X > depth` means the agent wandered or retried; `X < depth` means it
+Compare `Calls` to `Size`: more calls means the agent wandered or retried; fewer means it
 stopped early (often narrating or hallucinating hops instead of calling the tool). Both are
-loop-following failures.
+loop-following failures. On `FAIL`, the expected/actual secret mismatch is printed to stderr.
 
 ## agentParallelismBenchmark — parallel discrimination (independence)
 
@@ -53,8 +76,8 @@ The inverse axis. The agent is given `tasks` **independent** `id → value` pair
 listed up front, so there is no data dependency. A `lookup` tool returns each value. An agent
 that recognizes independence issues all calls in **one turn**; one that needlessly serializes
 spreads them across `tasks` turns. The tool runs in parallel and gauges its own concurrency, so
-the metric is **efficiency** (calls vs turns), not a correctness match — `correct=yes` is only a
-gate confirming all lookups were actually performed.
+the headline signal is `Turns` vs `Calls`, not a correctness match — `PASS` is only a gate
+confirming all lookups were actually performed.
 
 ```mermaid
 flowchart LR
@@ -70,12 +93,12 @@ for k in 4 8 16 32; do ./agentParallelismBenchmark $k; done
 ```
 
 ```
-pd tasks=8 calls=8 turns=1 maxConcurrency=8 efficiency=8.0 correct=yes   # batched — ideal
-pd tasks=8 calls=8 turns=8 maxConcurrency=1 efficiency=1.0 correct=yes   # serialized
+| parallelism | 8 | 8 | 1 | PASS |   # batched — ideal
+| parallelism | 8 | 8 | 8 | PASS |   # serialized
 ```
 
-`turns` near 1 with high `maxConcurrency` means the agent batched the independent calls;
-`turns` near `tasks` with `maxConcurrency=1` means it serialized them. A model whose provider
+`Turns` near 1 means the agent batched the independent calls; `Turns` near `Size` means it
+serialized them. The measured `maxConcurrency` is printed to stderr. A model whose provider
 never emits multiple tool calls per turn reads as fully serial — a valid result, not a bug.
 
 ## Reproducibility
