@@ -8,8 +8,10 @@ results can disagree: a model can pass one and fail another.
 ## Results
 
 Every run prints exactly one normalized markdown table row on stdout — same columns for
-every benchmark — so after a run (or a sweep) the rows paste directly into this table.
-Failure details and extra signals go to stderr, never into the row.
+every benchmark — and copies it to the system clipboard, so after a run the row pastes
+directly into this table. Failure details and extra signals go to stderr, never into the
+row. In a sweep each run overwrites the clipboard, so copy the sweep's rows from the
+terminal instead.
 
 | Benchmark | Model | Size | Calls | Turns | Result |
 |-----------|-------|------|-------|-------|--------|

@@ -2,6 +2,7 @@
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.benchmark.boundary.PointerChasingBenchmark;
+import airhacks.zsmith.tools.control.WriteClipboardTool;
 import airhacks.zsmith.tui.control.CommandLine;
 
 void main(String... args) {
@@ -22,9 +23,11 @@ void main(String... args) {
 
     var result = benchmark.score(agent.chat("go"));
 
-    // one normalized markdown row on stdout — paste into the summary table in README.md;
-    // failure details go to stderr so they never end up in the table
-    IO.println(result.markdownRow(agent.modelName()));
+    // one normalized markdown row on stdout and in the clipboard — ready to paste into the
+    // summary table in README.md; failure details go to stderr so they never end up in the table
+    var row = result.markdownRow(agent.modelName());
+    IO.println(row);
+    System.err.println(WriteClipboardTool.write(row));
     var diagnostics = result.diagnostics();
     if (!diagnostics.isEmpty()) {
         System.err.println(diagnostics);

@@ -18,8 +18,13 @@ public interface WriteClipboardTool {
     }
 
     private static String run(JSONObject input) {
+        return write(input.getString(Field.text.name()));
+    }
+
+    /// Also usable directly (e.g. benchmark scripts copying their result row). Returns a
+    /// human-readable outcome instead of throwing — no clipboard (headless, SSH) is not fatal.
+    static String write(String text) {
         try {
-            var text = input.getString(Field.text.name());
             var selection = new StringSelection(text);
             var clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
             clipboard.setContents(selection, selection);
