@@ -17,14 +17,17 @@ terminal instead.
 |-----------|-------|------|-------|-------|--------|
 | loop | claude-opus-4-8 | 50 | 50 | – | PASS |
 | parallelism | claude-opus-4-8 | 8 | 8 | 1 | PASS |
+| recovery | claude-opus-4-8 | 3 | 12 | – | PASS |
 
-- **Benchmark** — `loop` (pointer chasing) or `parallelism` (parallel discrimination)
+- **Benchmark** — `loop` (pointer chasing), `parallelism` (parallel discrimination), or
+  `recovery` (transient-fault recovery)
 - **Model** — the model reported by the LLM responses: the one actually served, which can
   differ from the configured one (529 fallback, lightmetal's own config)
-- **Size** — the task size knob: chain `depth` for loop, independent `tasks` for parallelism
+- **Size** — the task size knob: chain `depth` for loop, independent `tasks` for parallelism,
+  injected `faults` for recovery
 - **Calls** — total tool calls the agent issued
-- **Turns** — agent turns that issued tool calls; loop does not track turns (`–`)
-- **Result** — `PASS`/`FAIL`: secret match (loop), all values retrieved (parallelism)
+- **Turns** — agent turns that issued tool calls; the serial benchmarks do not track turns (`–`)
+- **Result** — `PASS`/`FAIL`: secret match (loop, recovery), all values retrieved (parallelism)
 
 A sweep appends ready-to-paste rows:
 
@@ -73,6 +76,42 @@ for d in 10 25 50 100 200; do ./agentLoopBenchmark $d; done
 Compare `Calls` to `Size`: more calls means the agent wandered or retried; fewer means it
 stopped early (often narrating or hallucinating hops instead of calling the tool). Both are
 loop-following failures. On `FAIL`, the expected/actual secret mismatch is printed to stderr.
+
+## agentErrorRecoveryBenchmark — transient-fault recovery (robustness)
+
+The same pointer chase as the loop benchmark — identical system prompt, identical tool
+surface — but every third hop fails exactly once with
+`ERROR: transient failure for key '…' — call again with the same key.` and succeeds on
+retry. The only recovery cue is that error text: nothing in the prompt or the tool
+description announces that failures can happen, so the benchmark measures whether the agent
+**reads and reacts to tool errors**. Retrying continues the walk; giving up truncates the
+secret; a fabricated fragment cannot match the seeded ground truth. `faults` is the size
+knob, and the chain is `3 × faults` hops long so recovery is demanded repeatedly, spread
+over the whole walk.
+
+```mermaid
+flowchart LR
+    S[start key] --> F[follow_pointer]
+    F -->|fragment + next key| F
+    F -->|ERROR: transient| R[retry same key]
+    R --> F
+    F -->|next = END| A[assemble secret]
+```
+
+```
+./agentErrorRecoveryBenchmark          # default 3 faults (9 hops)
+for f in 2 4 8; do ./agentErrorRecoveryBenchmark $f; done
+```
+
+```
+| recovery | claude-opus-4-8 | 3 | 12 | – | PASS |   # 9 hops + 3 retries — ideal
+| recovery | claude-opus-4-8 | 3 | 5 | – | FAIL |    # gave up at the second fault
+```
+
+Ideal `Calls` = hops + faults: each fault costs exactly one retry. `recovered=X/faults` on
+stderr shows how many injected failures were retried past; `Calls` well below hops + faults
+means the agent abandoned the walk or hallucinated past an error — the mismatched secret
+exposes both.
 
 ## agentParallelismBenchmark — parallel discrimination (independence)
 

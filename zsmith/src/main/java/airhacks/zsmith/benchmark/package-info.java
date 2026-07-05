@@ -28,5 +28,12 @@
  * serializes them. Its tool runs in parallel and gauges its own concurrency, so the metric is
  * efficiency (calls vs turns) rather than a correctness match — a capability that can disagree
  * with loop-following, which is what makes it worth measuring separately.
+ *
+ * <p>{@link airhacks.zsmith.benchmark.boundary.ErrorRecoveryBenchmark} probes the robustness
+ * axis: the identical pointer chase, but seeded hops fail transiently exactly once (see
+ * {@link airhacks.zsmith.benchmark.control.TransientFaultTool}) and succeed on retry. Nothing
+ * in the prompt or tool description announces the faults — the error text is the only cue —
+ * so it measures whether the agent reacts to tool errors by retrying rather than giving up or
+ * fabricating the missing fragment; the seeded secret exposes both failure modes.
  */
 package airhacks.zsmith.benchmark;

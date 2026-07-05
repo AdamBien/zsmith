@@ -1,0 +1,31 @@
+#!/usr/bin/java --enable-native-access=ALL-UNNAMED -Dtools.permissions.default=allow --class-path=../zsmith/zbo/zsmith.jar:../zsmith/zbo/lightmetal.jar --source 25
+
+import airhacks.zsmith.agent.boundary.Agent;
+import airhacks.zsmith.benchmark.boundary.ErrorRecoveryBenchmark;
+import airhacks.zsmith.tools.control.WriteClipboardTool;
+import airhacks.zsmith.tui.control.CommandLine;
+
+void main(String... args) {
+
+    var faults = CommandLine.firstInt(args, 3);
+
+    var benchmark = new ErrorRecoveryBenchmark(faults);
+
+    // The serial walk needs one turn per hop plus one retry turn per injected fault plus one
+    // turn to emit the answer. The extra slack absorbs stray turns — a "thinking" turn with
+    // no tool call, or an extra retry — so an occasional wasted turn does not trip a false FAIL.
+    var maxIterations = benchmark.depth() + faults + 20;
+
+    var agent = new Agent("error-recoverer", benchmark.systemPrompt())
+            .withTool(benchmark.tool())
+            .withMaxIterations(maxIterations);
+
+    var result = benchmark.score(agent.chat("go"));
+
+    // one normalized markdown row on stdout and in the clipboard — ready to paste into the
+    // summary table in README.md; the recovery count goes to stderr so it never ends up in the table
+    var row = result.markdownRow(agent.modelName());
+    IO.println(row);
+    System.err.println(WriteClipboardTool.write(row));
+    System.err.println(result.diagnostics());
+}

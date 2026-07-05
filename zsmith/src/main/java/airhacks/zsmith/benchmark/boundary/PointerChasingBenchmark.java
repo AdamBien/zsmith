@@ -47,6 +47,14 @@ public class PointerChasingBenchmark {
     }
 
     public String systemPrompt() {
+        return chasePrompt(this.chain.start());
+    }
+
+    /**
+     * Shared with {@link ErrorRecoveryBenchmark}: identical instructions, so recovery behavior
+     * is driven purely by the tool's error text, not by prompt differences.
+     */
+    public static String chasePrompt(String startKey) {
         return """
                You are chasing a chain of pointers to reconstruct a hidden secret.
 
@@ -59,7 +67,7 @@ public class PointerChasingBenchmark {
 
                When finished, reply with ONLY the concatenated fragments in the exact
                order you collected them: no spaces, no separators, no extra words.
-               """.formatted(this.chain.start());
+               """.formatted(startKey);
     }
 
     public BenchmarkResult score(String agentAnswer) {
