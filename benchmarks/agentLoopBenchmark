@@ -24,7 +24,7 @@ void main(String... args) {
 
     // one normalized markdown row on stdout — paste into the summary table in README.md;
     // failure details go to stderr so they never end up in the table
-    IO.println(result.markdownRow());
+    IO.println(result.markdownRow(agent.modelName()));
     var diagnostics = result.diagnostics();
     if (!diagnostics.isEmpty()) {
         System.err.println(diagnostics);

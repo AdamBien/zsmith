@@ -10,9 +10,9 @@ package airhacks.zsmith.benchmark.entity;
  */
 public record EfficiencyResult(int tasks, int calls, int turns, int maxConcurrency, boolean correct) {
 
-    public String markdownRow() {
-        return new BenchmarkRow("parallelism", this.tasks, this.calls, String.valueOf(this.turns), this.correct)
-                .markdown();
+    public String markdownRow(String model) {
+        return new BenchmarkRow("parallelism", model, this.tasks, this.calls, String.valueOf(this.turns),
+                this.correct).markdown();
     }
 
     public String diagnostics() {

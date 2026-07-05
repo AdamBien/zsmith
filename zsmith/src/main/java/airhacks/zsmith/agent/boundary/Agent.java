@@ -267,6 +267,13 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         return chat("go");
     }
 
+    /// The model name reported by the most recent LLM response — the model actually served,
+    /// which can differ from the configured one (529 fallback, lightmetal's own config).
+    /// `"unknown"` before the first chat / act invocation.
+    public String modelName() {
+        return LLM.servedModelName();
+    }
+
     public String chat(String userMessage) {
         Objects.requireNonNull(userMessage, "Chat requires a message, use act() for agentic workflows");
         Log.prompt(userMessage);

@@ -11,12 +11,14 @@ Every run prints exactly one normalized markdown table row on stdout — same co
 every benchmark — so after a run (or a sweep) the rows paste directly into this table.
 Failure details and extra signals go to stderr, never into the row.
 
-| Benchmark | Size | Calls | Turns | Result |
-|-----------|------|-------|-------|--------|
-| loop | 50 | 50 | – | PASS |
-| parallelism | 8 | 8 | 1 | PASS |
+| Benchmark | Model | Size | Calls | Turns | Result |
+|-----------|-------|------|-------|-------|--------|
+| loop | claude-opus-4-8 | 50 | 50 | – | PASS |
+| parallelism | claude-opus-4-8 | 8 | 8 | 1 | PASS |
 
 - **Benchmark** — `loop` (pointer chasing) or `parallelism` (parallel discrimination)
+- **Model** — the model reported by the LLM responses: the one actually served, which can
+  differ from the configured one (529 fallback, lightmetal's own config)
 - **Size** — the task size knob: chain `depth` for loop, independent `tasks` for parallelism
 - **Calls** — total tool calls the agent issued
 - **Turns** — agent turns that issued tool calls; loop does not track turns (`–`)
@@ -62,8 +64,8 @@ for d in 10 25 50 100 200; do ./agentLoopBenchmark $d; done
 ```
 
 ```
-| loop | 50 | 50 | – | PASS |
-| loop | 100 | 63 | – | FAIL |
+| loop | claude-opus-4-8 | 50 | 50 | – | PASS |
+| loop | claude-opus-4-8 | 100 | 63 | – | FAIL |
 ```
 
 Compare `Calls` to `Size`: more calls means the agent wandered or retried; fewer means it
@@ -93,8 +95,8 @@ for k in 4 8 16 32; do ./agentParallelismBenchmark $k; done
 ```
 
 ```
-| parallelism | 8 | 8 | 1 | PASS |   # batched — ideal
-| parallelism | 8 | 8 | 8 | PASS |   # serialized
+| parallelism | claude-opus-4-8 | 8 | 8 | 1 | PASS |   # batched — ideal
+| parallelism | claude-opus-4-8 | 8 | 8 | 8 | PASS |   # serialized
 ```
 
 `Turns` near 1 means the agent batched the independent calls; `Turns` near `Size` means it

@@ -201,9 +201,14 @@ public interface OpenAI {
         }
 
         var stopReason = "tool_calls".equals(finishReason) ? "tool_use" : "end_turn";
-        return new JSONObject()
+        var anthropicResponse = new JSONObject()
                 .put("content", contentBlocks)
                 .put("stop_reason", stopReason);
+        var model = openaiResponse.optString("model", "");
+        if (!model.isBlank()) {
+            anthropicResponse.put("model", model);
+        }
+        return anthropicResponse;
     }
 
     static JSONObject parseArgs(String arguments) {

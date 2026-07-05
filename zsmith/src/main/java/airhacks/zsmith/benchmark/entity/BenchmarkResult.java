@@ -9,8 +9,8 @@ package airhacks.zsmith.benchmark.entity;
  */
 public record BenchmarkResult(int depth, int toolCalls, boolean passed, String expected, String actual) {
 
-    public String markdownRow() {
-        return new BenchmarkRow("loop", this.depth, this.toolCalls, "–", this.passed).markdown();
+    public String markdownRow(String model) {
+        return new BenchmarkRow("loop", model, this.depth, this.toolCalls, "–", this.passed).markdown();
     }
 
     public String diagnostics() {

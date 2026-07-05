@@ -59,6 +59,26 @@ public interface LLM {
     }
 
     static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-        return Provider.fromConfig().invoke(system, messages, tools, temperature);
+        var response = Provider.fromConfig().invoke(system, messages, tools, temperature);
+        ServedModel.capture(response);
+        return response;
+    }
+
+    /// The model name observed on the most recent LLM response — the model actually served,
+    /// which can differ from the configured one (529 fallback, lightmetal's own config).
+    static String servedModelName() {
+        return ServedModel.last;
+    }
+
+    final class ServedModel {
+
+        static volatile String last = "unknown";
+
+        static void capture(JSONObject response) {
+            var model = response.optString("model", "");
+            if (!model.isBlank()) {
+                last = model;
+            }
+        }
     }
 }

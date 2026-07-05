@@ -19,7 +19,7 @@ import airhacks.zsmith.tools.control.ToolHandler;
  *         .withTool(benchmark.tool())
  *         .withMaxIterations(70);
  * var result = benchmark.score(agent.chat("go"));
- * IO.println(result.markdownRow());
+ * IO.println(result.markdownRow(agent.modelName()));
  * }</pre>
  */
 public class PointerChasingBenchmark {

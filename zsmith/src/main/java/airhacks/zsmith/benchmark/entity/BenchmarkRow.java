@@ -6,14 +6,15 @@ package airhacks.zsmith.benchmark.entity;
  * single summary table (see {@code benchmarks/README.md}). {@code turns} is a string because
  * not every benchmark tracks turns — pointer chasing reports {@code "–"}.
  */
-public record BenchmarkRow(String benchmark, int size, int calls, String turns, boolean passed) {
+public record BenchmarkRow(String benchmark, String model, int size, int calls, String turns, boolean passed) {
 
     public static final String HEADER = """
-            | Benchmark | Size | Calls | Turns | Result |
-            |-----------|------|-------|-------|--------|""";
+            | Benchmark | Model | Size | Calls | Turns | Result |
+            |-----------|-------|------|-------|-------|--------|""";
 
     public String markdown() {
         var result = this.passed ? "PASS" : "FAIL";
-        return "| %s | %d | %d | %s | %s |".formatted(this.benchmark, this.size, this.calls, this.turns, result);
+        return "| %s | %s | %d | %d | %s | %s |"
+                .formatted(this.benchmark, this.model, this.size, this.calls, this.turns, result);
     }
 }
