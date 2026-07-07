@@ -141,6 +141,17 @@ anthropic.api.key=sk-ant-...
 anthropic.version=2023-06-01
 ```
 
+### Example: Anthropic Configuration
+
+A complete `~/.zsmith/app.properties` for the native Anthropic API. `llm.provider` and `claude.model` are shown with their defaults, so both lines are optional — listing them makes the active provider and model explicit:
+
+```properties
+anthropic.version=2023-06-01
+llm.provider=claude
+claude.model=claude-opus-4-8
+anthropic.api.key=sk-ant-[]
+```
+
 ### Model
 
 The default Claude model is `claude-opus-4-8`. Override via system property:
