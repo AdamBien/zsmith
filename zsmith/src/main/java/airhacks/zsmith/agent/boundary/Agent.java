@@ -43,7 +43,11 @@ import airhacks.zsmith.tools.entity.ToolUse;
 
 public record Agent(String name, String systemPrompt, Memory memory, Map<String, ToolHandler> tools, int maxIterations,
         float temperature, EpisodicMemoryStore episodicMemory) {
-    
+
+    public Agent {
+        tools = new HashMap<>(tools);
+    }
+
     public static final String version = Version.current();
 
     static {
@@ -172,7 +176,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     }
 
     Agent cloneForSession() {
-        return new Agent(this.name, this.systemPrompt, new Memory(), new HashMap<>(this.tools),
+        return new Agent(this.name, this.systemPrompt, new Memory(), this.tools,
                 this.maxIterations, this.temperature, this.episodicMemory);
     }
 
