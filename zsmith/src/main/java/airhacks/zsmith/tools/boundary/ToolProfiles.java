@@ -1,16 +1,12 @@
 package airhacks.zsmith.tools.boundary;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 import airhacks.zsmith.configuration.control.ZCfg;
-import airhacks.zsmith.tools.control.ListFilesEndingTool;
-import airhacks.zsmith.tools.control.ListFilesTool;
 import airhacks.zsmith.tools.control.ReadAnyFileTool;
-import airhacks.zsmith.tools.control.ReadFileTool;
-import airhacks.zsmith.tools.control.SearchFilesTool;
 import airhacks.zsmith.tools.control.ToolHandler;
 import airhacks.zsmith.tools.control.WriteAnyFileTool;
-import airhacks.zsmith.tools.control.WriteFileTool;
 
 /**
  * Predefined groupings of {@link ToolHandler}s for common agent capabilities.
@@ -36,9 +32,10 @@ public interface ToolProfiles {
 
     static List<ToolHandler> fileIO(String agentName) {
         var sandbox = new SandboxedFileSystem(ZCfg.sandboxPath(agentName));
-        return List.of(ReadFileTool.create(sandbox), WriteFileTool.create(sandbox), ListFilesTool.create(sandbox),
-                ListFilesEndingTool.create(sandbox), SearchFilesTool.create(sandbox),
-                ReadAnyFileTool.create(), WriteAnyFileTool.create());
+        var sandboxed = Stream.of(SandboxTools.values())
+                .map(tool -> tool.create(sandbox));
+        return Stream.concat(sandboxed, Stream.of(ReadAnyFileTool.create(), WriteAnyFileTool.create()))
+                .toList();
     }
 
     static List<ToolHandler> all() {

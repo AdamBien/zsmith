@@ -32,6 +32,8 @@ import airhacks.zsmith.skills.boundary.SkillStore;
 import airhacks.zsmith.skills.control.LoadSkillTool;
 import airhacks.zsmith.subagent.control.SubAgentTool;
 import airhacks.zsmith.systemprompt.control.SystemPromptLoader;
+import airhacks.zsmith.tools.boundary.SandboxTools;
+import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
 import airhacks.zsmith.tools.boundary.ToolProfiles;
 import airhacks.zsmith.tools.control.Console;
 import airhacks.zsmith.tools.control.LaunchAppTool;
@@ -109,6 +111,15 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
 
     public Agent withFileIOTools() {
         return withTools(ToolProfiles.fileIO(this.name));
+    }
+
+    public Agent withSandbox(Path rootDirectory, SandboxTools... tools) {
+        var sandbox = new SandboxedFileSystem(rootDirectory);
+        var selected = tools.length == 0 ? SandboxTools.values() : tools;
+        for (var tool : selected) {
+            withTool(tool.create(sandbox));
+        }
+        return this;
     }
 
     public Agent withAllTools() {
