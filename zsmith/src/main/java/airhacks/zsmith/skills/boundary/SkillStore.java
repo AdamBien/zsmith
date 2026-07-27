@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.logging.control.Log;
@@ -19,6 +20,7 @@ public class SkillStore {
 
     static final String SKILL_FILE = "SKILL.md";
     static final String SKILLS_DIR = "skills";
+    static final String SKILLS_DIRECTORIES_KEY = "skills.directories";
 
     private final Map<String, Skill> skills;
 
@@ -54,13 +56,14 @@ public class SkillStore {
 
     public static SkillStore forAgent(String agentName) {
         var userHome = System.getProperty("user.home");
-        var dirs = List.of(
+        var configured = ZCfg.paths(SKILLS_DIRECTORIES_KEY).stream();
+        var defaults = Stream.of(
             Path.of(userHome, "." + ZCfg.APP_NAME, SKILLS_DIR),
             Path.of(userHome, "." + ZCfg.APP_NAME, agentName, SKILLS_DIR),
             Path.of(SKILLS_DIR),
             Path.of(agentName, SKILLS_DIR)
         );
-        return new SkillStore(dirs);
+        return new SkillStore(Stream.concat(configured, defaults).toList());
     }
 
     void scanDirectory(Path directory) {

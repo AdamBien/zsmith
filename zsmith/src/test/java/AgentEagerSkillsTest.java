@@ -37,10 +37,15 @@ void main() throws IOException {
         assert !lazy.systemPrompt().contains("use records by default")
                 : "catalog-based prompt must not inline skill content: " + lazy.systemPrompt();
 
-        var unchanged = new Agent("empty", "You review code.")
-                .withEagerSkills(new SkillStore(List.of(tempDir.resolve("missing"))));
-        assert "You review code.".equals(unchanged.systemPrompt())
-                : "empty store must leave the system prompt unchanged: " + unchanged.systemPrompt();
+        System.setProperty("skills.directories", tempDir.toString());
+        try {
+            var configured = new Agent("configured", "You review code.")
+                    .withEagerSkills("java-conventions");
+            assert configured.systemPrompt().contains("use records by default")
+                    : "skills.directories should make the skill name-addressable: " + configured.systemPrompt();
+        } finally {
+            System.clearProperty("skills.directories");
+        }
     } finally {
         deleteRecursively(tempDir);
     }

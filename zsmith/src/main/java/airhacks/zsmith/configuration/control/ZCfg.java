@@ -163,6 +163,30 @@ static void loadFromFile(Path file, Properties properties) {
         return split(value);
     }
 
+    /**
+     * Retrieves comma-separated values as paths, expanding a leading {@code ~}
+     * to the user's home directory.
+     *
+     * @param key the configuration key
+     * @return list of expanded paths, empty list if key doesn't exist
+     */
+    public static List<Path> paths(String key) {
+        return strings(key).stream()
+                .map(ZCfg::expandHome)
+                .toList();
+    }
+
+    static Path expandHome(String value) {
+        var userHome = System.getProperty("user.home");
+        if (value.equals("~")) {
+            return Path.of(userHome);
+        }
+        if (value.startsWith("~/")) {
+            return Path.of(userHome, value.substring(2));
+        }
+        return Path.of(value);
+    }
+
     public static void storeAgentProperty(String agentName, String key, String value) {
         var userHome = System.getProperty("user.home");
         var agentConfigDir = Path.of(userHome, "." + APP_NAME, agentName);
