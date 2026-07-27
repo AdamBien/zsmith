@@ -19,6 +19,7 @@ All examples expect `zsmith.jar` and `lightmetal.jar` on the classpath (resolved
 | [`fileCalculator`](fileCalculator) | File I/O tools (`READ_ANY_FILE`, `WRITE_ANY_FILE`) — read an expression from a file, compute, write the result back. |
 | [`transcriber`](transcriber) | Sub-agent delegation (`withSubAgent`) plus persistent episodic memory (`withEpisodicMemory`) over a podcast-transcript workflow. |
 | [`linkTitler`](linkTitler) | A delegating agent that hands each URL to a `link_labeler` sub-agent, keeping fetched page content out of the parent's context. Reads/writes the clipboard. |
+| [`javaConventionsReviewer`](javaConventionsReviewer) | A repository code-review agent — sandboxed on a repo root, it lists Java sources (`list_files_ending`), delegates each file to a `java_reviewer` sub-agent (`read_file`, `search_files`) primed with the [java-conventions](https://airails.dev) skill, and writes a markdown report (`write_file`) to `CONVENTIONS_REVIEW.md`. |
 | [`assistant`](assistant) + [`zschat`](zschat) | A client/server pair: `assistant` is a fully loaded agent — every built-in tool (`withAllTools`), episodic memory, and the full skill catalog (`withSkills`) — served over HTTP (`withHttpServer`); `zschat` (zsmith chat) is the TUI chat client (`Chat`) that connects to it. See below. |
 
 ## Running `assistant` + `zschat`

@@ -8,15 +8,14 @@ import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import org.json.JSONArray;
 
+import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.entity.Episode;
 import airhacks.zsmith.episodicmemory.entity.MemoryAccessEvent;
 import airhacks.zsmith.episodicmemory.entity.MemoryType;
-import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.logging.control.Log;
 
 public class EpisodicMemoryStore {

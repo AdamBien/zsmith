@@ -108,6 +108,13 @@ var agent = new Agent("assistant")
 
 `withAllTools()` includes all tools from the `Tools` enum. Sandboxed file tools (`read_file`, `write_file`, `list_files`) require `withFileIOTools()` because they need a configured `sandbox.path`.
 
+`withSandbox(root, tools...)` grants sandboxed file tools on an explicit root directory instead of the configured `sandbox.path` — select tools via the `SandboxTools` enum, or omit the selection to grant all of them:
+
+```java
+var reviewer = new Agent("reviewer", "You review Java code.")
+        .withSandbox(repository, SandboxTools.READ_FILE, SandboxTools.SEARCH_FILES);
+```
+
 ### Launch App Tool
 
 `withLaunchAppTool()` adds a config-driven tool that launches an external application and passes arguments to it:
@@ -550,6 +557,13 @@ Default skill resolution (each layer overrides the previous):
 3. `./skills/` — local project skills
 4. `./[agentName]/skills/` — local agent-specific
 
+Additional directories join the chain (lowest precedence, before layer 1) via the `skills.directories` configuration property — a comma-separated list, `~` expands to the user home. E.g. to reuse Claude Code skills:
+
+```properties
+# ~/.zsmith/app.properties
+skills.directories=~/.claude/skills
+```
+
 ```java
 var agent = new Agent()
         .withSkills();
@@ -570,6 +584,13 @@ var agent = new Agent("planner")
 ```
 
 Skills not matching the given names are excluded from the catalog and from `load_skill`.
+
+Eager skills — inline the full skill content into the system prompt at construction time instead of exposing the `load_skill` tool. Use this when a skill is not optional context but the agent's job description (e.g. review rules the model must always apply). Names resolve through the same chain as `withSkillsNamed`, including `skills.directories`; `withEagerSkills(SkillStore store)` accepts a custom store:
+
+```java
+var agent = new Agent("reviewer", "You review Java code.")
+        .withEagerSkills("java-conventions");
+```
 
 ## Episodic Memory
 

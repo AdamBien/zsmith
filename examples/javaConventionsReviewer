@@ -1,0 +1,60 @@
+#!/usr/bin/java --enable-native-access=ALL-UNNAMED -Dtools.permissions.default=allow --class-path=../zsmith/zbo/zsmith.jar --source 25
+
+
+import airhacks.zsmith.agent.boundary.Agent;
+import static airhacks.zsmith.tools.boundary.SandboxTools.LIST_FILES_ENDING;
+import static airhacks.zsmith.tools.boundary.SandboxTools.READ_FILE;
+import static airhacks.zsmith.tools.boundary.SandboxTools.SEARCH_FILES;
+import static airhacks.zsmith.tools.boundary.SandboxTools.WRITE_FILE;
+
+// The java-conventions skill (home: https://airails.dev) is resolved by name
+// through the skill directory chain; directories outside the default chain
+// (e.g. ~/.claude/skills) are added via skills.directories in
+// ~/.zsmith/app.properties.
+
+void main(String... args) {
+    var repository = Path.of(args.length > 0 ? args[0] : ".").toAbsolutePath().normalize();
+
+    var javaReviewer = new Agent("java_reviewer", """
+    You review exactly one Java source file against the java-conventions
+    skill below.
+
+    Given a relative file path, use the read_file tool to read the file, then
+    check it against every convention. When a finding depends on usage in
+    other files (e.g. whether an identifier is used elsewhere), you may use
+    the search_files tool to verify. Report each violation as one markdown
+    bullet:
+    - <identifier or line>: <violated rule> — <suggested fix>
+
+    Return ONLY the bullets, nothing else. If the file is fully compliant,
+    return exactly:
+    compliant
+    """)
+    .withEagerSkills("java-conventions")
+    .withSandbox(repository, READ_FILE, SEARCH_FILES)
+    .withMaxIterations(10);
+
+    var conventionsReviewer = new Agent("javaConventionsReviewer", """
+    You review a Java repository for code conventions compliance and write a
+    markdown report.
+
+    1. Use the list_files_ending tool with ending ".java" to obtain all Java
+       source files, one relative path per line.
+    2. For every file, in order, use the delegate_to_java_reviewer tool with
+       that single relative path. Never read Java files yourself — delegation
+       keeps source code out of your context.
+    3. Aggregate the findings into a markdown report:
+       - start with `# Java Conventions Review`
+       - then a summary: files reviewed, compliant files, files with findings
+       - then one `## <path>` section per file with findings, containing its
+         bullets unchanged
+    4. Use the write_file tool to write the report to CONVENTIONS_REVIEW.md.
+
+    Be concise.
+    """)
+    .withSandbox(repository, LIST_FILES_ENDING, WRITE_FILE)
+    .withSubAgent(javaReviewer)
+    .withMaxIterations(100);
+
+    IO.println(conventionsReviewer.act());
+}
