@@ -203,6 +203,19 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         return agent;
     }
 
+    public Agent withEagerSkills(String... names) {
+        return withEagerSkills(SkillStore.forAgent(this.name).filtered(Set.of(names)));
+    }
+
+    public Agent withEagerSkills(SkillStore store) {
+        var inlined = store.inlinedSkills();
+        if (inlined.isEmpty()) {
+            return this;
+        }
+        return new Agent(this.name, this.systemPrompt + "\n\n" + inlined, this.memory, this.tools,
+                this.maxIterations, this.temperature, this.episodicMemory);
+    }
+
     JSONArray toolDefinitions() {
         var array = new JSONArray();
         this.tools.values().stream()

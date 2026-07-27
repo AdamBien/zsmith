@@ -19,4 +19,11 @@ public record Skill(String name, String description, String content, Path path) 
     public String catalogEntry() {
         return "- %s: %s".formatted(this.name, this.description);
     }
+
+    public String promptSection() {
+        return """
+        ## Skill: %s
+
+        %s""".formatted(this.name, this.content);
+    }
 }

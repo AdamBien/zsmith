@@ -111,6 +111,12 @@ public class SkillStore {
         return List.copyOf(this.skills.values());
     }
 
+    public String inlinedSkills() {
+        return this.skills.values().stream()
+                .map(Skill::promptSection)
+                .collect(Collectors.joining("\n\n"));
+    }
+
     public String catalog() {
         if (this.skills.isEmpty()) {
             return "";
