@@ -101,7 +101,7 @@ Predefined tool groupings for common use cases:
 ```java
 var agent = new Agent("assistant")
         .withUserIOTools()   // user_message, user_question, user_confirmation
-        .withFileIOTools()   // read_file, write_file, list_files, read_any_file (sandboxed)
+        .withFileIOTools()   // read_file, write_file, list_files, list_files_ending, search_files, read_any_file (sandboxed)
         .withAllTools();     // calculator, current_time, clipboard, read_any_file,
                              // check_link, user_confirmation, user_message, user_question
 ```
@@ -679,6 +679,8 @@ var agent = new Agent("coordinator")
 | `ReadFileTool` | `read_file` | Reads the contents of a file within the sandbox directory |
 | `WriteFileTool` | `write_file` | Writes content to a file within the sandbox directory |
 | `ListFilesTool` | `list_files` | Lists all files within the sandbox directory |
+| `ListFilesEndingTool` | `list_files_ending` | Lists all files within the sandbox directory whose names end with a given suffix |
+| `SearchFilesTool` | `search_files` | Searches sandbox file contents for a regular expression; returns `path:line: text` matches like `grep -n`, optionally filtered by file suffix |
 | `ReadAnyFileTool` | `read_any_file` | Reads a file from any location on the filesystem |
 | `LinkCheckerTool` | `check_link` | Verifies a URL is reachable; returns status code, final URL after redirects, and content type |
 | `FetchUrlTool` | `fetch_url` | Fetches a URL with a browser User-Agent and returns status, content type, and up to 20000 chars of the body |
