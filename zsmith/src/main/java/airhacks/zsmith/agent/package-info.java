@@ -8,6 +8,7 @@
 /// - `equip-episodic-memory` — attach persistent memories with store and recall
 /// - `delegate-to-sub-agent` — expose a child agent as a tool
 /// - `serve-http` — expose chat over per-session HTTP
+/// - `serve-agentcore` — expose per-session chat through the AWS AgentCore runtime contract
 /// - `chat` — run the reasoning loop for a user message and return the final answer
 /// - `act` — run the reasoning loop without a user message
 /// - `clear-memory` — discard the conversation history
@@ -45,6 +46,7 @@
 ///
 /// ### R5: Serve sessions
 /// - R5.1 — When serving over HTTP, the BC shall give each session an isolated agent clone with its own conversation memory and shared tools and configuration.
+/// - R5.2 — When serving the AgentCore runtime contract, the BC shall give each runtime session an isolated agent clone with its own conversation memory and shared tools and configuration.
 ///
 /// ### R6: Manage conversation memory
 /// - R6.1 — When memory is cleared, the BC shall discard the conversation history.

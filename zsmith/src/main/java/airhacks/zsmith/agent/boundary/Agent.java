@@ -22,6 +22,7 @@ import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.control.RecallMemoryTool;
 import airhacks.zsmith.episodicmemory.control.StoreMemoryTool;
 import airhacks.zsmith.errors.control.Errors;
+import airhacks.zsmith.agentcore.boundary.AgentCoreServer;
 import airhacks.zsmith.http.boundary.AgentHttpServer;
 import airhacks.zsmith.http.boundary.ChatEngine;
 import airhacks.zsmith.logging.control.Log;
@@ -178,12 +179,20 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     }
 
     public Agent withHttpServer(int port) {
+        AgentHttpServer.start(sessionEngine(), port);
+        return this;
+    }
+
+    public Agent withAgentCoreServer(int port) {
+        AgentCoreServer.start(sessionEngine(), port);
+        return this;
+    }
+
+    ChatEngine sessionEngine() {
         var perSession = new ConcurrentHashMap<String, Agent>();
-        ChatEngine engine = (sessionId, message) -> perSession
+        return (sessionId, message) -> perSession
                 .computeIfAbsent(sessionId, id -> cloneForSession())
                 .chat(message);
-        AgentHttpServer.start(engine, port);
-        return this;
     }
 
     Agent cloneForSession() {
