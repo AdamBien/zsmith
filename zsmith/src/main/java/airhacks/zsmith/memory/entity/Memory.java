@@ -3,7 +3,7 @@ package airhacks.zsmith.memory.entity;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.json.JSONArray;
+import airhacks.zsmith.json.JSONArray;
 
 public record Memory(List<Message> messages) {
 

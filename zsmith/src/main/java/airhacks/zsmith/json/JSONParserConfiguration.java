@@ -1,4 +1,4 @@
-package org.json;
+package airhacks.zsmith.json;
 
 /**
  * Configuration object for the JSON parser. The configuration is immutable.

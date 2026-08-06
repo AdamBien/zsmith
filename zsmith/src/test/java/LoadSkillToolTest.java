@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.util.Comparator;
 import java.util.List;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.skills.boundary.SkillStore;
 import airhacks.zsmith.skills.control.LoadSkillTool;

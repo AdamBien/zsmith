@@ -9,8 +9,8 @@ import java.net.http.HttpResponse.BodyHandlers;
 import java.util.EnumSet;
 import java.util.Optional;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.configuration.control.HttpTimeouts;

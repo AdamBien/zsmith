@@ -4,7 +4,7 @@ import java.nio.file.Path;
 import java.nio.file.attribute.PosixFilePermissions;
 import java.util.Comparator;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.ExecuteScriptTool;
 

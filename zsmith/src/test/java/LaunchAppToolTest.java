@@ -1,4 +1,4 @@
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.LaunchAppTool;
 

@@ -1,6 +1,6 @@
 package airhacks.zsmith.agentcore.entity;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public record ResultEnvelope(String response, String status) {
 

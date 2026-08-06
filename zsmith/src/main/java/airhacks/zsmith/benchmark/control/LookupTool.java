@@ -3,7 +3,7 @@ package airhacks.zsmith.benchmark.control;
 import java.util.Map;
 import java.util.concurrent.atomic.AtomicInteger;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.ToolHandler;
 

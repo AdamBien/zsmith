@@ -3,7 +3,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.Objects;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.WriteAnyFileTool;
 

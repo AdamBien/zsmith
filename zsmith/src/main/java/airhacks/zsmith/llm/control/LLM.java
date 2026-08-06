@@ -1,7 +1,7 @@
 package airhacks.zsmith.llm.control;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.claude.control.Claude;
 import airhacks.zsmith.configuration.control.ZCfg;

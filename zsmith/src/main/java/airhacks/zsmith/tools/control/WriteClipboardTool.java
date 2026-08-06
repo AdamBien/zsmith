@@ -3,7 +3,7 @@ package airhacks.zsmith.tools.control;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public interface WriteClipboardTool {
 

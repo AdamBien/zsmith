@@ -5,7 +5,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardOpenOption;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public interface WriteAnyFileTool {
 

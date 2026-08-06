@@ -1,6 +1,6 @@
 package airhacks.zsmith.tools.control;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public interface CalculatorTool {
 

@@ -2,7 +2,7 @@ package airhacks.zsmith.tools.control;
 
 import java.nio.file.Path;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
 

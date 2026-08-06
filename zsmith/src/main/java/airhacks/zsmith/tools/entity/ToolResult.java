@@ -1,6 +1,6 @@
 package airhacks.zsmith.tools.entity;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public record ToolResult(String toolUseId, String content, boolean isError) {
 

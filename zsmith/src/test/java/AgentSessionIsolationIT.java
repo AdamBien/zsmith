@@ -15,8 +15,8 @@ import java.util.concurrent.atomic.AtomicInteger;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
 

@@ -1,6 +1,6 @@
 package airhacks.zsmith.skills.control;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.skills.boundary.SkillStore;

@@ -1,4 +1,4 @@
-package org.json;
+package airhacks.zsmith.json;
 
 /*
 Public Domain.

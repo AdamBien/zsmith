@@ -2,7 +2,7 @@ package airhacks.zsmith.tools.control;
 
 import java.util.function.Consumer;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.logging.control.Log;
 

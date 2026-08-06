@@ -2,7 +2,7 @@ package airhacks.zsmith.episodicmemory.control;
 
 import java.util.List;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.entity.Episode;

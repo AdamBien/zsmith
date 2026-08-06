@@ -10,7 +10,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.json.JSONArray;
+import airhacks.zsmith.json.JSONArray;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.entity.Episode;

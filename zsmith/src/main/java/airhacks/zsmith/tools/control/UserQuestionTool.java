@@ -2,7 +2,7 @@ package airhacks.zsmith.tools.control;
 
 import java.util.function.Function;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public interface UserQuestionTool {
 

@@ -11,8 +11,8 @@ import java.util.concurrent.TimeUnit;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpServer;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 /// Traces agent spec R3.3 — see src/main/java/airhacks/zsmith/agent/package-info.java
 ///

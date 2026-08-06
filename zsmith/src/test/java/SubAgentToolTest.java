@@ -36,7 +36,7 @@ void main() throws Exception {
 
     // depth guard
     var shallowTool = new SubAgentTool(child, "shallow", "test", 0);
-    var result = shallowTool.execute(new org.json.JSONObject().put("task", "test"));
+    var result = shallowTool.execute(new airhacks.zsmith.json.JSONObject().put("task", "test"));
     assert result.contains("Error") && result.contains("depth")
             : "expected depth error but got: " + result;
 

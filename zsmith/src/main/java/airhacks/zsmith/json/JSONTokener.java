@@ -1,4 +1,4 @@
-package org.json;
+package airhacks.zsmith.json;
 
 import java.io.*;
 import java.nio.charset.StandardCharsets;

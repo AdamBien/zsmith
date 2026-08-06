@@ -6,7 +6,7 @@ import java.nio.charset.StandardCharsets;
 import com.sun.net.httpserver.HttpExchange;
 import com.sun.net.httpserver.HttpHandler;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agentcore.entity.ResultEnvelope;
 import airhacks.zsmith.http.boundary.ChatEngine;

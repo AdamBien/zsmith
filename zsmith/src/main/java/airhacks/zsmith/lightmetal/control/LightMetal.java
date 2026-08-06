@@ -4,8 +4,8 @@ import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.function.UnaryOperator;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;

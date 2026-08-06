@@ -11,7 +11,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
-import org.json.JSONArray;
+import airhacks.zsmith.json.JSONArray;
 
 import airhacks.zsmith.agent.control.Version;
 import airhacks.zsmith.agent.entity.AgentDefaults;

@@ -4,7 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public interface ReadAnyFileTool {
 

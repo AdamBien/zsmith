@@ -1,6 +1,6 @@
 import java.util.Objects;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.tools.boundary.Tools;

@@ -2,7 +2,7 @@ package airhacks.zsmith.episodicmemory.entity;
 
 import java.time.Instant;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 public record Episode(String content, String timestamp, MemoryType type) {
 

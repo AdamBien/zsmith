@@ -1,7 +1,7 @@
 package airhacks.zsmith.memory.entity;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 public record Message(String role, Object content) {
 

@@ -7,8 +7,8 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;

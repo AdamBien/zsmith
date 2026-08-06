@@ -1,6 +1,6 @@
 package airhacks.zsmith.tools.boundary;
 
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.CalculatorTool;
 import airhacks.zsmith.tools.control.CurrentTimeTool;

@@ -5,8 +5,8 @@ import java.lang.reflect.RecordComponent;
 import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.stream.Stream;
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.tools.entity.Tool;
 
 public class ToolRegistry {

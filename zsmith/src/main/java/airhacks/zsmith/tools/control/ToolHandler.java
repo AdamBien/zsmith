@@ -3,8 +3,8 @@ package airhacks.zsmith.tools.control;
 import java.util.List;
 import java.util.function.Function;
 
-import org.json.JSONArray;
-import org.json.JSONObject;
+import airhacks.zsmith.json.JSONArray;
+import airhacks.zsmith.json.JSONObject;
 
 public interface ToolHandler {
 
