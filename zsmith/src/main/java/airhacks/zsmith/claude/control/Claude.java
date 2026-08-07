@@ -51,7 +51,7 @@ public interface Claude {
     /// derived, so the same properties file can hold both the native Anthropic and the Bedrock
     /// configuration and flip between them with a single key.
     ///
-    /// @see [Amazon Bedrock endpoints](https://docs.aws.amazon.com/bedrock/latest/userguide/endpoints.html)
+    /// @see <a href="https://docs.aws.amazon.com/bedrock/latest/userguide/endpoints.html">Amazon Bedrock endpoints</a>
     static boolean bedrock() {
         return "bedrock".equalsIgnoreCase(ZCfg.string("llm.provider", "claude"));
     }

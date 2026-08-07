@@ -88,7 +88,7 @@ public class JSONWriter {
      * Append a value.
      * @param string A string value.
      * @return this
-     * @throws JSONException If the value is out of sequence.
+     * @throws IllegalStateException If the value is out of sequence.
      */
     private JSONWriter append(String string) {
         if (string == null) {
@@ -117,7 +117,7 @@ public class JSONWriter {
      * <code>endArray</code> will be appended to this array. The
      * <code>endArray</code> method must be called to mark the array's end.
      * @return this
-     * @throws JSONException If the nesting is too deep, or if the object is
+     * @throws IllegalStateException If the nesting is too deep, or if the object is
      * started in the wrong place (for example as a key or after the end of the
      * outermost array or object).
      */
@@ -136,7 +136,7 @@ public class JSONWriter {
      * @param m Mode
      * @param c Closing character
      * @return this
-     * @throws JSONException If unbalanced.
+     * @throws IllegalStateException If unbalanced.
      */
     private JSONWriter end(char m, char c) {
         if (this.mode != m) {
@@ -158,7 +158,7 @@ public class JSONWriter {
      * End an array. This method most be called to balance calls to
      * <code>array</code>.
      * @return this
-     * @throws JSONException If incorrectly nested.
+     * @throws IllegalStateException If incorrectly nested.
      */
     public JSONWriter endArray() {
         return this.end('a', ']');
@@ -168,7 +168,7 @@ public class JSONWriter {
      * End an object. This method most be called to balance calls to
      * <code>object</code>.
      * @return this
-     * @throws JSONException If incorrectly nested.
+     * @throws IllegalStateException If incorrectly nested.
      */
     public JSONWriter endObject() {
         return this.end('k', '}');
@@ -179,8 +179,9 @@ public class JSONWriter {
      * object, every value must be preceded by a key.
      * @param string A key string.
      * @return this
-     * @throws JSONException If the key is out of place. For example, keys
-     *  do not belong in arrays or if the key is null.
+     * @throws IllegalStateException If the key is out of place. For example, keys
+     *  do not belong in arrays, or the key is a duplicate.
+     * @throws IllegalArgumentException If the key is null.
      */
     public JSONWriter key(String string) {
         if (string == null) {
@@ -215,7 +216,7 @@ public class JSONWriter {
      * <code>endObject</code> will be appended to this object. The
      * <code>endObject</code> method must be called to mark the object's end.
      * @return this
-     * @throws JSONException If the nesting is too deep, or if the object is
+     * @throws IllegalStateException If the nesting is too deep, or if the object is
      * started in the wrong place (for example as a key or after the end of the
      * outermost array or object).
      */
@@ -237,7 +238,7 @@ public class JSONWriter {
     /**
      * Pop an array or object scope.
      * @param c The scope to close.
-     * @throws JSONException If nesting is wrong.
+     * @throws IllegalStateException If nesting is wrong.
      */
     private void pop(char c) {
         if (this.top <= 0) {
@@ -258,7 +259,7 @@ public class JSONWriter {
     /**
      * Push an array or object scope.
      * @param jo The scope to open.
-     * @throws JSONException If nesting is too deep.
+     * @throws IllegalStateException If nesting is too deep.
      */
     private void push(JSONObject jo) {
         if (this.top >= maxdepth) {
@@ -290,8 +291,10 @@ public class JSONWriter {
      *         object, beginning with <code>{</code>&nbsp;<small>(left
      *         brace)</small> and ending with <code>}</code>&nbsp;<small>(right
      *         brace)</small>.
-     * @throws JSONException
-     *             If the value is or contains an invalid number.
+     * @throws IllegalStateException
+     *             If a {@link JSONString}'s toJSONString method fails or
+     *             returns null. Numbers that are not valid JSON are quoted as
+     *             strings rather than rejected.
      */
     public static String valueToString(Object value) {
         if (value == null || value.equals(null)) {
@@ -344,7 +347,7 @@ public class JSONWriter {
      * <code>false</code>.
      * @param b A boolean.
      * @return this
-     * @throws JSONException if a called function has an error
+     * @throws IllegalStateException if a called function has an error
      */
     public JSONWriter value(boolean b) {
         return this.append(b ? "true" : "false");
@@ -354,7 +357,8 @@ public class JSONWriter {
      * Append a double value.
      * @param d A double.
      * @return this
-     * @throws JSONException If the number is not finite.
+     * @throws IllegalStateException If the value is out of sequence. Non-finite
+     *  doubles are quoted as strings rather than rejected.
      */
     public JSONWriter value(double d) {
         return this.value(Double.valueOf(d));
@@ -364,7 +368,7 @@ public class JSONWriter {
      * Append a long value.
      * @param l A long.
      * @return this
-     * @throws JSONException if a called function has an error
+     * @throws IllegalStateException if a called function has an error
      */
     public JSONWriter value(long l) {
         return this.append(Long.toString(l));
@@ -376,7 +380,7 @@ public class JSONWriter {
      * @param object The object to append. It can be null, or a Boolean, Number,
      *   String, JSONObject, or JSONArray, or an object that implements JSONString.
      * @return this
-     * @throws JSONException If the value is out of sequence.
+     * @throws IllegalStateException If the value is out of sequence.
      */
     public JSONWriter value(Object object) {
         return this.append(valueToString(object));
