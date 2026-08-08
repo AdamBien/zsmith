@@ -169,6 +169,18 @@ java -Dmodel=sonnet -cp zbo/zsmith.jar MyAgent.java
 
 Partial matching works — `sonnet` resolves to `claude-sonnet-4-7`, `4-7` to `claude-opus-4-7`, etc.
 
+### Forcing the First Tool Call
+
+An agent whose first move is meant to be a question dies on turn one when the model writes the question as prose instead of calling `user_question`: no tool use means `end_turn`, and the loop exits. The opening request therefore carries `"tool_choice": {"type": "any"}` on the Anthropic surface, or `"tool_choice": "required"` on the OpenAI-compatible one — see [forcing tool use](https://docs.claude.com/en/docs/agents-and-tools/tool-use/implement-tool-use) and the [OpenAI chat completions reference](https://platform.openai.com/docs/api-reference/chat/create).
+
+Only the opening turn is forced. Demanding a tool call on every turn would remove the agent loop's sole exit condition and leave it running to `maxIterations`. Requests carrying no tools are untouched, since both APIs reject `tool_choice` on its own.
+
+Switch it off for an endpoint that does not accept the field, or for an agent whose first answer is legitimately prose:
+
+```properties
+llm.require.first.tool.call=false
+```
+
 ### Properties Loading Order
 
 Loaded in order (each layer overrides the previous):

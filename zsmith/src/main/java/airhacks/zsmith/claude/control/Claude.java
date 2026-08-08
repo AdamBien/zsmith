@@ -15,6 +15,7 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.control.OpenAI;
 
@@ -197,14 +198,18 @@ public interface Claude {
         return model;
     }
 
-    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
+    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature,
+            ToolChoice toolChoice) {
         if (currentModel.wire() == Wire.OPENAI) {
-            return invokeOpenAICompatible(system, messages, tools, temperature);
+            return invokeOpenAICompatible(system, messages, tools, temperature, toolChoice);
         }
         var payloadJSON = claudeMessage(messages, temperature, system);
         payloadJSON.put("model", modelName());
         if (tools != null && !tools.isEmpty()) {
             payloadJSON.put("tools", tools);
+            if (toolChoice == ToolChoice.required) {
+                payloadJSON.put("tool_choice", new JSONObject().put("type", "any"));
+            }
         }
         var payload = payloadJSON.toString();
         Log.request(payload);
@@ -220,8 +225,10 @@ public interface Claude {
     /// of the agent stays Anthropic-native: the request is translated to OpenAI shape, sent over
     /// the same Bedrock transport as the native path, and the response is translated back to the
     /// Anthropic Messages shape callers expect.
-    static JSONObject invokeOpenAICompatible(String system, JSONArray messages, JSONArray tools, float temperature) {
-        var payload = OpenAI.translateRequest(system, messages, tools, temperature, modelName(), currentModel.maxTokens()).toString();
+    static JSONObject invokeOpenAICompatible(String system, JSONArray messages, JSONArray tools, float temperature,
+            ToolChoice toolChoice) {
+        var payload = OpenAI.translateRequest(system, messages, tools, temperature, modelName(),
+                currentModel.maxTokens(), toolChoice).toString();
         Log.request(payload);
         Log.llm(">> " + payload);
         var answer = invoke(payload);

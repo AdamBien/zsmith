@@ -17,6 +17,7 @@ import airhacks.zsmith.agent.control.Version;
 import airhacks.zsmith.agent.entity.AgentDefaults;
 import airhacks.zsmith.agent.entity.AgentTurnEvent;
 import airhacks.zsmith.llm.control.LLM;
+import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.control.RecallMemoryTool;
@@ -357,7 +358,8 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                         this.systemPrompt,
                         this.memory.toJSON(),
                         toolDefinitions(),
-                        this.temperature);
+                        this.temperature,
+                        ToolChoice.forTurn(iteration));
                 progress.addLLMInvocation();
 
                 var content = response.getJSONArray("content");

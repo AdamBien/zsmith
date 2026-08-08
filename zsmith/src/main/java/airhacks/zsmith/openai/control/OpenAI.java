@@ -12,6 +12,7 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
 
@@ -37,8 +38,9 @@ public interface OpenAI {
         return ZCfg.string("openai.api.key", "");
     }
 
-    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-        var openaiPayload = translateRequest(system, messages, tools, temperature);
+    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature,
+            ToolChoice toolChoice) {
+        var openaiPayload = translateRequest(system, messages, tools, temperature, model(), maxTokens(), toolChoice);
         var payloadString = openaiPayload.toString();
         Log.request(payloadString);
         Log.llm(">> " + payloadString);
@@ -71,10 +73,11 @@ public interface OpenAI {
     }
 
     static JSONObject translateRequest(String system, JSONArray messages, JSONArray tools, float temperature) {
-        return translateRequest(system, messages, tools, temperature, model(), maxTokens());
+        return translateRequest(system, messages, tools, temperature, model(), maxTokens(), ToolChoice.auto);
     }
 
-    static JSONObject translateRequest(String system, JSONArray messages, JSONArray tools, float temperature, String model, int maxTokens) {
+    static JSONObject translateRequest(String system, JSONArray messages, JSONArray tools, float temperature,
+            String model, int maxTokens, ToolChoice toolChoice) {
         var openaiMessages = new JSONArray();
         if (system != null && !system.isBlank()) {
             openaiMessages.put(new JSONObject().put("role", "system").put("content", system));
@@ -91,6 +94,9 @@ public interface OpenAI {
 
         if (tools != null && !tools.isEmpty()) {
             payload.put("tools", translateTools(tools));
+            if (toolChoice == ToolChoice.required) {
+                payload.put("tool_choice", "required");
+            }
         }
         return payload;
     }

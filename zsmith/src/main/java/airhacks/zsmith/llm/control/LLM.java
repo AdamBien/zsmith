@@ -6,6 +6,7 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.claude.control.Claude;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.lightmetal.control.LightMetal;
+import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.control.OpenAI;
 
@@ -14,30 +15,30 @@ public interface LLM {
     enum Provider {
         CLAUDE {
             @Override
-            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-                return Claude.invoke(system, messages, tools, temperature);
+            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice) {
+                return Claude.invoke(system, messages, tools, temperature, toolChoice);
             }
         },
         BEDROCK {
             @Override
-            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-                return Claude.invoke(system, messages, tools, temperature);
+            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice) {
+                return Claude.invoke(system, messages, tools, temperature, toolChoice);
             }
         },
         OPENAI {
             @Override
-            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-                return OpenAI.invoke(system, messages, tools, temperature);
+            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice) {
+                return OpenAI.invoke(system, messages, tools, temperature, toolChoice);
             }
         },
         LIGHTMETAL {
             @Override
-            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-                return LightMetal.invoke(system, messages, tools, temperature);
+            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice) {
+                return LightMetal.invoke(system, messages, tools, temperature, toolChoice);
             }
         };
 
-        public abstract JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature);
+        public abstract JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice);
 
         public static Provider fromConfig() {
             if (LightMetal.available()) {
@@ -58,8 +59,9 @@ public interface LLM {
         }
     }
 
-    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-        var response = Provider.fromConfig().invoke(system, messages, tools, temperature);
+    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature,
+            ToolChoice toolChoice) {
+        var response = Provider.fromConfig().invoke(system, messages, tools, temperature, toolChoice);
         ServedModel.capture(response);
         return response;
     }

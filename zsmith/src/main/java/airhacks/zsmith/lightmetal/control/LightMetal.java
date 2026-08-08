@@ -9,6 +9,7 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
+import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 
 public interface LightMetal {
@@ -30,8 +31,9 @@ public interface LightMetal {
         return ChatHolder.lookup() != null;
     }
 
-    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature) {
-        var payload = anthropicPayload(system, messages, tools, temperature);
+    static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature,
+            ToolChoice toolChoice) {
+        var payload = anthropicPayload(system, messages, tools, temperature, toolChoice);
         var payloadString = payload.toString();
         Log.request(payloadString);
         Log.llm(">> " + payloadString);
@@ -63,10 +65,15 @@ public interface LightMetal {
     static JSONObject invoke(String system, String user, float temperature) {
         var messages = new JSONArray()
                 .put(new JSONObject().put("role", "user").put("content", user));
-        return invoke(system, messages, null, temperature);
+        return invoke(system, messages, null, temperature, ToolChoice.auto);
     }
 
     static JSONObject anthropicPayload(String system, JSONArray messages, JSONArray tools, float temperature) {
+        return anthropicPayload(system, messages, tools, temperature, ToolChoice.auto);
+    }
+
+    static JSONObject anthropicPayload(String system, JSONArray messages, JSONArray tools, float temperature,
+            ToolChoice toolChoice) {
         var payload = new JSONObject()
                 .put("system", system == null ? "" : system)
                 .put("messages", messages)
@@ -78,6 +85,9 @@ public interface LightMetal {
         modelOverride().ifPresent(override -> payload.put("model", override));
         if (tools != null && !tools.isEmpty()) {
             payload.put("tools", tools);
+            if (toolChoice == ToolChoice.required) {
+                payload.put("tool_choice", new JSONObject().put("type", "any"));
+            }
         }
         return payload;
     }
