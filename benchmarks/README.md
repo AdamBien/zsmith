@@ -144,6 +144,82 @@ for k in 4 8 16 32; do ./agentParallelismBenchmark $k; done
 serialized them. The measured `maxConcurrency` is printed to stderr. A model whose provider
 never emits multiple tool calls per turn reads as fully serial — a valid result, not a bug.
 
+## Choosing a Model
+
+### Pointing the harness at a candidate
+
+The scripts fix their JVM flags in the shebang, so configure the model through properties
+rather than the command line. `./app.properties` — meaning `benchmarks/app.properties`, since
+that is the working directory — overrides `~/.zsmith/app.properties`, and a per-benchmark file
+under the agent's own name overrides both: `pointer-chaser/`, `error-recoverer/`,
+`parallel-worker/`.
+
+```properties
+# benchmarks/app.properties — served by lightmetal, which is on the scripts' classpath
+lightmetal.model=<model>
+```
+
+`lightmetal.jar` sits on the class path of all three scripts, and whenever LightMetal can
+resolve a chat implementation it takes precedence over `llm.provider` — the run logs
+`lightmetal.jar on classpath — overriding llm.provider=…` when it does. To score a hosted
+model instead, drop `lightmetal.jar` from the shebang's `--class-path` and configure the
+provider:
+
+```properties
+llm.provider=claude
+claude.model=claude-opus-4-8
+```
+
+Then check the **Model** column against what you configured. It reports the model that
+answered, not the one you asked for, so a 529 fallback or a LightMetal-side default shows up
+here — and a table row attributing a score to the wrong model is worse than no row.
+
+### Match the axis to the workload
+
+The three benchmarks are orthogonal by design, so there is no aggregate score to rank models
+by. Pick the axis your agent actually exercises:
+
+| Your agent | Decided by |
+|------------|------------|
+| Walks long serial chains — migrations, multi-step file edits, anything where step *n+1* depends on step *n* | `loop` |
+| Calls the network, remote APIs, or any tool that fails and can be retried | `recovery` |
+| Fans out over independent items — batch lookups, reading many files, per-item classification | `parallelism` |
+
+A model that wins on one axis can lose on another. Score the axes you need and ignore the rest.
+
+### Read the numbers, not the verdict
+
+`Result` is a gate, not the measurement. The signal is in the counts:
+
+- **loop** — `Calls` above `Size` means retries and wandering, which costs tokens. `Calls`
+  below `Size` means hops were skipped or invented. Both read `FAIL`, but the second is the
+  dangerous one: a model that fabricates a step it never took fails the same way on work
+  where no seeded secret exists to catch it.
+- **recovery** — ideal `Calls` is hops + faults. `recovered=X/faults` on stderr is the actual
+  metric; a model recovering 1 of 3 faults is not a model to put behind a flaky API.
+- **parallelism** — `Turns` near `Size` means every independent call took its own round trip.
+  That is a latency and cost result, not a correctness one, and it may be the provider rather
+  than the model: some never emit more than one tool call per turn.
+
+### Benchmark at your size, more than once
+
+The defaults are not your workload. Sweep the size knob and find where the model breaks —
+passing `loop` at depth 50 and failing at 100 is a perfectly good model for chains shorter
+than 50, and knowing that boundary is more useful than any single row.
+
+```
+for d in 10 25 50 100 200; do ./agentLoopBenchmark $d; done
+```
+
+The task is seeded, so the model is the only source of variance — which means a single `PASS`
+near the breaking point tells you little. Repeat a run three to five times before trusting a
+row at the edge; well inside the range, one run is enough.
+
+### What this does not measure
+
+Tool-calling behaviour only. Nothing here scores writing quality, knowledge, or judgement, and
+a model that chases pointers perfectly may still be the wrong one to draft your text.
+
 ## Reproducibility
 
 Every task is seeded, so a given size reproduces across runs; model non-determinism is the only
