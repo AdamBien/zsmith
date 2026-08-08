@@ -29,8 +29,30 @@ public class ZCfg {
 
     static final String SANDBOX_DIR = "agent-io";
 
+    static final String DATABASE_DIR = "memory";
+
     static Properties CACHE;
     public static String APP_NAME;
+
+    /// The configuration and data directory of the application: `~/.{appName}`.
+    public static Path homeDirectory() {
+        return Path.of(System.getProperty("user.home"), "." + APP_NAME);
+    }
+
+    public static Path agentDirectory(String agentName) {
+        return homeDirectory().resolve(agentName);
+    }
+
+    /// The browsable database of a single agent. Episodic memory and the improvement
+    /// log are separate tables of this one database.
+    public static Path agentDatabase(String agentName) {
+        return agentDirectory(agentName).resolve(DATABASE_DIR);
+    }
+
+    /// The database every agent shares, holding what is known about the user.
+    public static Path sharedDatabase() {
+        return homeDirectory().resolve(DATABASE_DIR);
+    }
 
     public static void loadBaseConfig(String appName) {
         APP_NAME = appName;

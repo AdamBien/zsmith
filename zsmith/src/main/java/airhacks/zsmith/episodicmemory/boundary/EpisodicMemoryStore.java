@@ -69,15 +69,11 @@ public class EpisodicMemoryStore {
     }
 
     static Path defaultPath() {
-        return resolvePath("memory");
+        return ZCfg.sharedDatabase();
     }
 
     public static Path agentPath(String agentName) {
-        return resolvePath(agentName + "/memory");
-    }
-
-    static Path resolvePath(String subdir) {
-        return Path.of(System.getProperty("user.home"), "." + ZCfg.APP_NAME, subdir);
+        return ZCfg.agentDatabase(agentName);
     }
 
     boolean isScoped() {

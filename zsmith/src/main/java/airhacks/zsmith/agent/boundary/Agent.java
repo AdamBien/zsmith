@@ -21,6 +21,8 @@ import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.control.RecallMemoryTool;
 import airhacks.zsmith.episodicmemory.control.StoreMemoryTool;
+import airhacks.zsmith.improvements.boundary.ImprovementLog;
+import airhacks.zsmith.improvements.control.ReportImprovementTool;
 import airhacks.zsmith.errors.control.Errors;
 import airhacks.zsmith.agentcore.boundary.AgentCoreServer;
 import airhacks.zsmith.http.boundary.AgentHttpServer;
@@ -167,6 +169,19 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 this.temperature, store);
         agent.tools.put("store_memory", new StoreMemoryTool(store));
         agent.tools.put("recall_memory", new RecallMemoryTool(store));
+        return agent;
+    }
+
+    /// Opt-in: the tool definition ships with every request, so it is worth its cost
+    /// only while an agent's instructions are still being worked on.
+    public Agent withImprovementLog() {
+        return withImprovementLog(ImprovementLog.forAgent(this.name));
+    }
+
+    public Agent withImprovementLog(ImprovementLog log) {
+        var agent = new Agent(this.name, this.systemPrompt, this.memory, this.tools, this.maxIterations,
+                this.temperature, this.episodicMemory);
+        agent.tools.put("report_improvement", new ReportImprovementTool(log));
         return agent;
     }
 

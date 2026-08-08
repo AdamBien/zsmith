@@ -632,6 +632,29 @@ Storing a memory the store already holds — same text, same type — is skipped
 
 Writes are atomic and per memory, so an interrupted write costs at most the memory being written, and two agents sharing a folder do not overwrite each other. An `episodic-memory.json` from an earlier release is imported on first start and moved aside as `episodic-memory.json.migrated`; repeated statements collapse into one and user memories move to the shared scope on the way in.
 
+## Improvement Log
+
+Opt-in. Adds a `report_improvement` tool with which the agent records where its own instructions fell short — the system prompt, a skill, or a tool description — as an `improvements` table next to its memories:
+
+```java
+var agent = new Agent("planner")
+        .withEpisodicMemory()
+        .withImprovementLog();
+```
+
+```
+~/.zsmith/planner/memory/
+├── index.html          # links both tables
+├── episodes/
+└── improvements/       # artifact, name, observation, trigger, suggestion
+```
+
+A report is an incident, not a proposal. `observation` (what the instruction failed to say) and `trigger` (the input that exposed it) are required; `suggestion` is optional, because an agent never observes how a different instruction would have played out — it is a reliable witness and an unreliable designer of its own prompt. A report missing its trigger is refused, which is what keeps the table from filling with "the task went well". Reporting the same gap twice is skipped.
+
+Nothing written here reaches the agent. The log is read and applied by a human: an agent that edits its own `system.prompt` has no oversight, and a bad edit changes the behaviour that would justify the next one.
+
+Keep it off for agents in steady use — a tool definition ships with every request, and one that fires rarely still costs its description on every turn while diluting selection across the others.
+
 ## Subagents
 
 Agents can delegate tasks to other agents via `withSubAgent()`. The child agent becomes a callable tool (`delegate_to_<name>`).
