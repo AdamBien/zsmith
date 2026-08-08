@@ -18,9 +18,7 @@ void main() throws Exception {
 }
 
 void populatedStoreInjectsCatalog() throws Exception {
-    var tempFile = Files.createTempFile("agent-injection", ".json");
-    Files.deleteIfExists(tempFile);
-    var store = new EpisodicMemoryStore(tempFile);
+    var store = new EpisodicMemoryStore(Files.createTempDirectory("agent-injection"));
     store.store(Episode.of("alpha fact", MemoryType.user));
     store.store(Episode.of("beta fact", MemoryType.project));
     store.store(Episode.of("gamma fact", MemoryType.feedback));
@@ -41,9 +39,7 @@ void populatedStoreInjectsCatalog() throws Exception {
 }
 
 void emptyStoreLeavesPromptUnchanged() throws Exception {
-    var tempFile = Files.createTempFile("agent-injection-empty", ".json");
-    Files.deleteIfExists(tempFile);
-    var store = new EpisodicMemoryStore(tempFile);
+    var store = new EpisodicMemoryStore(Files.createTempDirectory("agent-injection-empty"));
 
     var baseline = "BASE_PROMPT_EMPTY";
     var agent = new Agent("memory-injection-empty-test").withSystemPrompt(baseline).withEpisodicMemory(store);
@@ -52,9 +48,7 @@ void emptyStoreLeavesPromptUnchanged() throws Exception {
 }
 
 void appendOrderPreservesPrefix() throws Exception {
-    var tempFile = Files.createTempFile("agent-injection-order", ".json");
-    Files.deleteIfExists(tempFile);
-    var store = new EpisodicMemoryStore(tempFile);
+    var store = new EpisodicMemoryStore(Files.createTempDirectory("agent-injection-order"));
     store.store(Episode.of("ordered fact", MemoryType.reference));
 
     var baseline = "BASE_PROMPT_ORDER";

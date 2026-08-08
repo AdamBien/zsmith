@@ -1,5 +1,4 @@
 import java.nio.file.Files;
-import java.nio.file.Path;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
@@ -9,10 +8,14 @@ import airhacks.zsmith.episodicmemory.entity.MemoryType;
 void main() throws Exception {
     ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
 
-    var tempFile = Files.createTempFile("episodic-test", ".json");
-    Files.deleteIfExists(tempFile);
+    storesAndQueries();
+    reloadsFromDisk();
+    migratesLegacyJson();
+}
 
-    var store = new EpisodicMemoryStore(tempFile);
+void storesAndQueries() throws Exception {
+    var databaseRoot = Files.createTempDirectory("episodic-test");
+    var store = new EpisodicMemoryStore(databaseRoot);
 
     // store episodes of different types
     store.store(Episode.of("user pref", MemoryType.user));
@@ -68,6 +71,42 @@ void main() throws Exception {
     // clear removes all; catalog becomes empty
     store.clear();
     assert store.allEpisodes().isEmpty() : "should be empty after clear";
-    assert !Files.exists(tempFile) : "file should be deleted after clear";
+    assert !Files.exists(databaseRoot.resolve("episodes")) : "episodes table should be deleted after clear";
     assert "".equals(store.catalog()) : "catalog of empty store should be empty";
+}
+
+/// Each memory is its own page, so a second store over the same folder sees what
+/// the first one wrote — including multi-line content stored within the same second.
+void reloadsFromDisk() throws Exception {
+    var databaseRoot = Files.createTempDirectory("episodic-reload");
+    var store = new EpisodicMemoryStore(databaseRoot);
+    store.store(Episode.of("first fact", MemoryType.user));
+    store.store(Episode.of("second\nfact with <markup> & entities", MemoryType.project));
+
+    var reloaded = new EpisodicMemoryStore(databaseRoot);
+    assert reloaded.allEpisodes().size() == 2 : "expected 2 reloaded episodes, got: " + reloaded.allEpisodes().size();
+    var project = reloaded.byType(MemoryType.project);
+    assert project.size() == 1 : "expected 1 reloaded project episode, got: " + project.size();
+    assert "second\nfact with <markup> & entities".equals(project.getFirst().content())
+            : "content should survive the round-trip, got: " + project.getFirst().content();
+}
+
+void migratesLegacyJson() throws Exception {
+    var databaseRoot = Files.createTempDirectory("episodic-migration");
+    var legacy = databaseRoot.resolve("episodic-memory.json");
+    Files.writeString(legacy, """
+            [
+              {"content":"legacy fact","timestamp":"2026-01-02T03:04:05Z","type":"user"},
+              {"content":"legacy note","timestamp":"2026-01-02T03:04:06Z","category":"project"}
+            ]
+            """);
+
+    var store = new EpisodicMemoryStore(databaseRoot);
+
+    assert store.allEpisodes().size() == 2 : "expected 2 migrated episodes, got: " + store.allEpisodes().size();
+    assert "legacy fact".equals(store.allEpisodes().getFirst().content()) : "migrated content mismatch";
+    assert store.byType(MemoryType.project).size() == 1 : "legacy 'category' should map to the type";
+    assert !Files.exists(legacy) : "migrated file should be moved aside";
+    assert Files.exists(databaseRoot.resolve("episodic-memory.json.migrated")) : "migrated file should be kept";
+    assert new EpisodicMemoryStore(databaseRoot).allEpisodes().size() == 2 : "migration must not run twice";
 }

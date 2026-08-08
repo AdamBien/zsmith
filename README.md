@@ -594,16 +594,25 @@ var agent = new Agent("reviewer", "You review Java code.")
 
 ## Episodic Memory
 
-Agents store and recall information across conversations using `EpisodicMemoryStore`. Memories are persisted to a JSON file and classified by type: `user`, `feedback`, `project`, `reference`.
+Agents store and recall information across conversations using `EpisodicMemoryStore`. Memories are classified by type — `user`, `feedback`, `project`, `reference` — and each one is persisted as its own XHTML page, so the memory folder is a browsable website: open `index.html` to read what an agent remembers, delete a page to make it forget.
 
-Agent-specific memory (stored at `~/.zsmith/[agentName]/memory/episodic-memory.json`):
+```
+~/.zsmith/planner/memory/
+├── index.html                        # links the tables
+└── episodes/
+    ├── index.html                    # links the memories, oldest first
+    ├── 2026-08-08-132706.html        # content, timestamp, type
+    └── 2026-08-08-141902.html
+```
+
+Agent-specific memory (stored at `~/.zsmith/[agentName]/memory`):
 
 ```java
 var agent = new Agent("planner")
         .withEpisodicMemory();
 ```
 
-Shared memory across all agents (stored at `~/.zsmith/memory/episodic-memory.json`):
+Shared memory across all agents (stored at `~/.zsmith/memory`):
 
 ```java
 var agent = new Agent("planner")
@@ -614,8 +623,10 @@ Custom storage location:
 
 ```java
 var agent = new Agent()
-        .withEpisodicMemory(new EpisodicMemoryStore(Path.of("custom-memory.json")));
+        .withEpisodicMemory(new EpisodicMemoryStore(Path.of("custom-memory")));
 ```
+
+Writes are atomic and per memory, so an interrupted write costs at most the memory being written, and two agents sharing a folder do not overwrite each other. An `episodic-memory.json` from an earlier release is imported on first start and moved aside as `episodic-memory.json.migrated`.
 
 ## Subagents
 

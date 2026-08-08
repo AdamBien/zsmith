@@ -4,10 +4,16 @@ import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
+import java.time.ZoneOffset;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Optional;
 import java.util.stream.Collectors;
 
 import airhacks.zsmith.json.JSONArray;
@@ -16,16 +22,24 @@ import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.entity.Episode;
 import airhacks.zsmith.episodicmemory.entity.MemoryAccessEvent;
 import airhacks.zsmith.episodicmemory.entity.MemoryType;
+import airhacks.zsmith.htmldb.boundary.HtmlStore;
 import airhacks.zsmith.logging.control.Log;
 
 public class EpisodicMemoryStore {
 
-    private final List<Episode> episodes;
-    private final Path filePath;
+    static final String EPISODES_TABLE = "episodes";
+    static final String LEGACY_FILE = "episodic-memory.json";
+    static final String MIGRATED_SUFFIX = ".migrated";
+    static final DateTimeFormatter KEY_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss")
+            .withZone(ZoneOffset.UTC);
 
-    public EpisodicMemoryStore(Path filePath) {
-        this.filePath = filePath;
+    private final List<Episode> episodes;
+    private final HtmlStore store;
+
+    public EpisodicMemoryStore(Path databaseRoot) {
+        this.store = new HtmlStore(databaseRoot);
         this.episodes = new ArrayList<>();
+        migrateLegacy(databaseRoot);
         load();
     }
 
@@ -41,20 +55,13 @@ public class EpisodicMemoryStore {
         return resolvePath(agentName + "/memory");
     }
 
-    private static Path resolvePath(String subdir) {
-        var userHome = System.getProperty("user.home");
-        var memoryDir = Path.of(userHome, "." + ZCfg.APP_NAME, subdir);
-        try {
-            Files.createDirectories(memoryDir);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
-        return memoryDir.resolve("episodic-memory.json");
+    static Path resolvePath(String subdir) {
+        return Path.of(System.getProperty("user.home"), "." + ZCfg.APP_NAME, subdir);
     }
 
     public void store(Episode episode) {
         this.episodes.add(episode);
-        save();
+        save(episode);
     }
 
     public List<Episode> allEpisodes() {
@@ -141,33 +148,23 @@ public class EpisodicMemoryStore {
 
     public void clear() {
         this.episodes.clear();
-        try {
-            Files.deleteIfExists(this.filePath);
-        } catch (IOException e) {
-            throw new UncheckedIOException(e);
-        }
+        this.store.removeTable(EPISODES_TABLE);
     }
 
-    void save() {
+    void save(Episode episode) {
         var event = new MemoryAccessEvent();
         event.store = "episodic";
         event.operation = "save";
         event.episodeCount = this.episodes.size();
         event.begin();
         try {
-            var array = new JSONArray();
-            this.episodes.stream()
-                    .map(Episode::toJSON)
-                    .forEach(array::put);
-            var payload = array.toString();
-            event.payloadSize = payload.length();
-            try {
-                Files.writeString(this.filePath, payload);
-                event.outcome = "success";
-            } catch (IOException e) {
-                event.outcome = "io_error";
-                throw new UncheckedIOException(e);
-            }
+            var fields = episode.toFields();
+            event.payloadSize = fields.values().stream().mapToInt(String::length).sum();
+            this.store.append(EPISODES_TABLE, keyOf(episode), fields);
+            event.outcome = "success";
+        } catch (UncheckedIOException e) {
+            event.outcome = "io_error";
+            throw e;
         } finally {
             if (event.shouldCommit()) {
                 event.commit();
@@ -176,33 +173,77 @@ public class EpisodicMemoryStore {
     }
 
     void load() {
-        if (!Files.exists(this.filePath)) {
-            return;
-        }
         var event = new MemoryAccessEvent();
         event.store = "episodic";
         event.operation = "load";
         event.begin();
         try {
-            var json = Files.readString(this.filePath);
-            event.payloadSize = json.length();
-            var array = new JSONArray(json);
-            for (int i = 0; i < array.length(); i++) {
-                var episode = Episode.fromJSON(array.getJSONObject(i));
-                this.episodes.add(episode);
-            }
+            var loaded = this.store.keys(EPISODES_TABLE).stream()
+                    .map(this::read)
+                    .flatMap(Optional::stream)
+                    .toList();
+            this.episodes.addAll(loaded);
             event.episodeCount = this.episodes.size();
+            event.payloadSize = loaded.stream().mapToInt(episode -> episode.content().length()).sum();
             event.outcome = "success";
-        } catch (IOException e) {
-            Log.warning("could not load episodic memory from " + this.filePath + ": " + e.getMessage());
+        } catch (UncheckedIOException e) {
+            Log.warning("could not load episodic memory: " + e.getMessage());
             event.outcome = "io_error";
-        } catch (IllegalArgumentException | IllegalStateException e) {
-            Log.warning("malformed JSON in " + this.filePath + ": " + e.getMessage());
-            event.outcome = "parse_error";
         } finally {
             if (event.shouldCommit()) {
                 event.commit();
             }
+        }
+    }
+
+    /// One unreadable or hand-edited page costs a single memory, not the whole
+    /// store — the reason records are kept in separate files.
+    Optional<Episode> read(String key) {
+        try {
+            return this.store.get(EPISODES_TABLE, key).map(entry -> Episode.fromFields(entry.fields()));
+        } catch (IllegalArgumentException | IllegalStateException | UncheckedIOException e) {
+            Log.warning("skipping unreadable memory " + key + ": " + e.getMessage());
+            return Optional.empty();
+        }
+    }
+
+    /// Derives the page name from the episode timestamp so the generated index
+    /// lists memories in chronological order.
+    static String keyOf(Episode episode) {
+        return KEY_FORMAT.format(instantOf(episode.timestamp()));
+    }
+
+    static Instant instantOf(String timestamp) {
+        if (timestamp == null) {
+            return Instant.now();
+        }
+        try {
+            return Instant.parse(timestamp);
+        } catch (DateTimeParseException _) {
+            return Instant.now();
+        }
+    }
+
+    /// Imports memories written by the previous single-file JSON format and moves
+    /// that file aside, so an existing installation keeps its memory on upgrade.
+    void migrateLegacy(Path databaseRoot) {
+        var legacy = databaseRoot.resolve(LEGACY_FILE);
+        if (!Files.exists(legacy)) {
+            return;
+        }
+        try {
+            var array = new JSONArray(Files.readString(legacy));
+            for (var index = 0; index < array.length(); index++) {
+                var episode = Episode.fromJSON(array.getJSONObject(index));
+                this.store.append(EPISODES_TABLE, keyOf(episode), episode.toFields());
+            }
+            Files.move(legacy, databaseRoot.resolve(LEGACY_FILE + MIGRATED_SUFFIX),
+                    StandardCopyOption.REPLACE_EXISTING);
+            Log.info("migrated %d memories from %s".formatted(array.length(), legacy));
+        } catch (IOException e) {
+            Log.warning("could not migrate " + legacy + ": " + e.getMessage());
+        } catch (IllegalArgumentException | IllegalStateException e) {
+            Log.warning("malformed JSON in " + legacy + ": " + e.getMessage());
         }
     }
 }
