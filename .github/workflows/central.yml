@@ -23,13 +23,13 @@ jobs:
       run:
         working-directory: zsmith
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       # Ahead of the republish guard only because that guard is a Java 25 source
       # script and the runner image has no JDK 25 of its own. The cost is that a
       # taken version is discovered after the toolchain is provisioned and the
       # signing key imported, rather than before.
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '25'
