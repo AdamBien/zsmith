@@ -605,28 +605,32 @@ Agents store and recall information across conversations using `EpisodicMemorySt
     └── 2026-08-08-141902.html
 ```
 
-Agent-specific memory (stored at `~/.zsmith/[agentName]/memory`):
+Agent memory — the type decides the scope. What the agent learns about the *user* is written to the shared `~/.zsmith/memory`, because it is true whatever the task; `project`, `reference` and `feedback` stay in `~/.zsmith/[agentName]/memory`. Both scopes are read as one, so a second agent — or a subagent — knows the same person without inheriting the first agent's notes:
 
 ```java
 var agent = new Agent("planner")
         .withEpisodicMemory();
 ```
 
-Shared memory across all agents (stored at `~/.zsmith/memory`):
+Single scope — every memory, whatever its type, in the shared database:
 
 ```java
 var agent = new Agent("planner")
         .withSharedEpisodicMemory();
 ```
 
-Custom storage location:
+Single scope at a custom location:
 
 ```java
 var agent = new Agent()
         .withEpisodicMemory(new EpisodicMemoryStore(Path.of("custom-memory")));
 ```
 
-Writes are atomic and per memory, so an interrupted write costs at most the memory being written, and two agents sharing a folder do not overwrite each other. An `episodic-memory.json` from an earlier release is imported on first start and moved aside as `episodic-memory.json.migrated`.
+Only `user` memories cross agents. An agent writing `project` notes straight to the shared database with `withSharedEpisodicMemory()` keeps them to itself.
+
+Storing a memory the store already holds — same text, same type — is skipped, so a model repeating itself across turns does not crowd out the injection caps (`zsmith.memory.injected.per_type`, `zsmith.memory.injected.max_total`, applied across both scopes together).
+
+Writes are atomic and per memory, so an interrupted write costs at most the memory being written, and two agents sharing a folder do not overwrite each other. An `episodic-memory.json` from an earlier release is imported on first start and moved aside as `episodic-memory.json.migrated`; repeated statements collapse into one and user memories move to the shared scope on the way in.
 
 ## Subagents
 

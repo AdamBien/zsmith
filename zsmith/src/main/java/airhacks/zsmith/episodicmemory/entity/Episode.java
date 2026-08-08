@@ -35,6 +35,12 @@ public record Episode(String content, String timestamp, MemoryType type) {
         return this.type != null && this.type.equals(type);
     }
 
+    /// Two memories carrying the same statement are the same memory, however far
+    /// apart they were written — the timestamp is metadata, not identity.
+    public boolean isSameMemory(Episode other) {
+        return this.content.equals(other.content()) && this.type == other.type();
+    }
+
     public SortedMap<String, String> toFields() {
         var fields = new TreeMap<String, String>();
         fields.put(CONTENT, this.content);

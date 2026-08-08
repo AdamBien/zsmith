@@ -1,4 +1,5 @@
 import java.nio.file.Files;
+import java.nio.file.Path;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
@@ -11,6 +12,8 @@ void main() throws Exception {
     storesAndQueries();
     reloadsFromDisk();
     migratesLegacyJson();
+    dedupesIdenticalMemories();
+    sharesUserMemoriesAcrossAgents();
 }
 
 void storesAndQueries() throws Exception {
@@ -109,4 +112,62 @@ void migratesLegacyJson() throws Exception {
     assert !Files.exists(legacy) : "migrated file should be moved aside";
     assert Files.exists(databaseRoot.resolve("episodic-memory.json.migrated")) : "migrated file should be kept";
     assert new EpisodicMemoryStore(databaseRoot).allEpisodes().size() == 2 : "migration must not run twice";
+}
+
+void dedupesIdenticalMemories() throws Exception {
+    var databaseRoot = Files.createTempDirectory("episodic-dedup");
+    var store = new EpisodicMemoryStore(databaseRoot);
+
+    assert store.store(Episode.of("User's name is Duke", MemoryType.user)) : "first store should report stored";
+    assert !store.store(Episode.of("User's name is Duke", MemoryType.user)) : "repeat should report nothing stored";
+    assert store.store(Episode.of("User's name is Duke", MemoryType.project)) : "same text, other type is a new memory";
+
+    assert store.allEpisodes().size() == 2 : "expected 2 memories, got: " + store.allEpisodes().size();
+    assert new EpisodicMemoryStore(databaseRoot).allEpisodes().size() == 2 : "duplicate must not reach disk";
+}
+
+/// A memory about the user is written to the shared database, so a second agent —
+/// or a subagent — knows the same person without inheriting the first agent's notes.
+void sharesUserMemoriesAcrossAgents() throws Exception {
+    var shared = Files.createTempDirectory("episodic-shared");
+    var first = new EpisodicMemoryStore(Files.createTempDirectory("episodic-agent-one"), shared);
+    first.store(Episode.of("User is a Java architect", MemoryType.user));
+    first.store(Episode.of("Episode 148 needs a transcript", MemoryType.project));
+
+    // an agent writing straight to the shared database must not export its notes
+    new EpisodicMemoryStore(shared).store(Episode.of("shared-scope project note", MemoryType.project));
+
+    var second = new EpisodicMemoryStore(Files.createTempDirectory("episodic-agent-two"), shared);
+    assert second.byType(MemoryType.user).size() == 1 : "user memory should cross agents, got: " + second.byType(MemoryType.user);
+    assert second.byType(MemoryType.project).isEmpty() : "project notes must stay agent-local, got: " + second.byType(MemoryType.project);
+    assert second.allEpisodes().size() == 1 : "second agent should see only the shared memory";
+
+    // clearing an agent leaves the shared user memory for everyone else
+    first.clear();
+    assert new EpisodicMemoryStore(Files.createTempDirectory("episodic-agent-three"), shared)
+            .byType(MemoryType.user).size() == 1 : "clear must not wipe the shared scope";
+
+    promotesLegacyUserMemories(shared);
+}
+
+/// An agent upgrading from the JSON format has its user memories moved to the
+/// shared scope, collapsing the copies a repeating model left behind.
+void promotesLegacyUserMemories(Path shared) throws Exception {
+    var agentRoot = Files.createTempDirectory("episodic-legacy-agent");
+    Files.writeString(agentRoot.resolve("episodic-memory.json"), """
+            [
+              {"content":"User's name is Duke","timestamp":"2026-01-02T03:04:05Z","type":"user"},
+              {"content":"User's name is Duke","timestamp":"2026-01-02T03:04:06Z","type":"user"},
+              {"content":"transcript pending","timestamp":"2026-01-02T03:04:07Z","type":"project"}
+            ]
+            """);
+
+    var upgraded = new EpisodicMemoryStore(agentRoot, shared);
+    assert upgraded.byType(MemoryType.user).size() == 2
+            : "one Duke plus the existing shared memory, got: " + upgraded.byType(MemoryType.user);
+    assert upgraded.byType(MemoryType.project).size() == 1 : "project note should stay agent-local";
+    assert !Files.exists(agentRoot.resolve("episodes").resolve("2026-01-02-030405.html"))
+            : "the user memory should have moved out of the agent database";
+    assert Files.exists(shared.resolve("episodes").resolve("2026-01-02-030405.html"))
+            : "the user memory should have landed in the shared database";
 }

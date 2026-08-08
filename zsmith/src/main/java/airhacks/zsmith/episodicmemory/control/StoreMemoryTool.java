@@ -23,12 +23,18 @@ public class StoreMemoryTool implements ToolHandler {
     @Override
     public String description() {
         return """
-                Stores an episode in long-term memory for future recall. \
+                Stores a durable fact in long-term memory for future recall. \
+                Store only what is still worth knowing in a later, unrelated session. \
+                This is not a journal: never record that a task was completed, what was \
+                produced in this session, or what the user just asked for. \
                 Each memory must be classified with a type: \
-                'user' for information about the user's role, preferences, and knowledge; \
-                'feedback' for guidance or corrections the user has given; \
-                'project' for ongoing work, goals, decisions, or incidents; \
-                'reference' for pointers to external resources and systems.""";
+                'user' for who the user is — role, expertise, preferences; every agent \
+                shares these, so store only what holds regardless of the task; \
+                'feedback' for guidance the user gave on how to work — a correction or a \
+                confirmed approach, together with the reason behind it; \
+                'project' for goals, decisions and constraints of ongoing work that outlive \
+                this session; \
+                'reference' for pointers to external resources — URLs, dashboards, tickets.""";
     }
 
     enum Field { content, type }
@@ -36,7 +42,7 @@ public class StoreMemoryTool implements ToolHandler {
     @Override
     public JSONObject inputSchema() {
         return ToolHandler.schema(
-                Prop.string(Field.content, "The information to remember"),
+                Prop.string(Field.content, "The fact to remember, stated so it makes sense on its own in a later session"),
                 Prop.stringEnum(Field.type, "The memory type: user, feedback, project, or reference",
                         "user", "feedback", "project", "reference")
         );
@@ -47,7 +53,9 @@ public class StoreMemoryTool implements ToolHandler {
         var content = input.getString(Field.content.name());
         var type = MemoryType.fromString(input.getString(Field.type.name()));
         var episode = new Episode(content, null, type);
-        store.store(episode);
+        if (!store.store(episode)) {
+            return "Already remembered, nothing stored.";
+        }
         return "Memory stored.";
     }
 }
