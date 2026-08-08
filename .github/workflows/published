@@ -1,0 +1,130 @@
+#!/usr/bin/env -S java --source 25
+
+import module java.net.http;
+import module java.xml;
+
+// java.xml exports javax.xml.datatype.Duration, which collides with the
+// java.time.Duration reached through the implicit java.base import. A
+// single-type import outranks both module imports and settles it.
+import java.time.Duration;
+
+/// published — answers whether this module's current coordinates already exist
+/// on Maven Central.
+///
+/// Central is append-only: a released version can never be replaced or deleted.
+/// The release workflow asks this before building, so a taken version fails in
+/// seconds with an actionable message rather than after a build, a signing pass
+/// and an upload that Central rejects anyway.
+///
+/// Takes no arguments on purpose. Every value already has a source of truth in
+/// the module directory — groupId and artifactId in pom.xml, the version in
+/// version.txt — and passing them in would create a second place for the same
+/// facts to be written, free to disagree with the first. Run it from the module
+/// directory; it reads both files from the working directory.
+///
+/// The version deliberately comes from version.txt rather than pom.xml, because
+/// the workflow stamps the POM from version.txt only after this check runs.
+///
+/// Exit codes are the interface — 0 published, 1 not published, 2 unusable
+/// answer. A guard reads as "if this succeeds, refuse to continue".
+
+String name = MethodHandles.lookup().lookupClass().getName();
+String version = "2026-08-08.2";
+
+static final String CENTRAL = "https://repo1.maven.org/maven2/";
+static final int ATTEMPTS = 3;
+
+record Coordinates(String groupId, String artifactId, String artifactVersion) {
+
+    String text() {
+        return "%s:%s:%s".formatted(groupId, artifactId, artifactVersion);
+    }
+
+    URI uri() {
+        return URI.create(CENTRAL
+                + groupId.replace('.', '/') + "/"
+                + artifactId + "/"
+                + artifactVersion + "/");
+    }
+}
+
+/// Only direct children of <project> are considered. A descendant search would
+/// happily return the first plugin's groupId instead of the project's own.
+Optional<String> childText(Element parent, String tag) {
+    var children = parent.getChildNodes();
+    for (var index = 0; index < children.getLength(); index++) {
+        var child = children.item(index);
+        if (child.getNodeType() == Node.ELEMENT_NODE && child.getNodeName().equals(tag)) {
+            return Optional.of(child.getTextContent().trim());
+        }
+    }
+    return Optional.empty();
+}
+
+Coordinates readCoordinates() throws Exception {
+    var pom = Path.of("pom.xml");
+    var versionFile = Path.of("version.txt");
+    if (!Files.exists(pom) || !Files.exists(versionFile)) {
+        System.err.println("%s: pom.xml and version.txt not found in %s — run from the module directory"
+                .formatted(name, Path.of("").toAbsolutePath()));
+        System.exit(2);
+    }
+    var project = DocumentBuilderFactory.newInstance()
+            .newDocumentBuilder()
+            .parse(pom.toFile())
+            .getDocumentElement();
+    var groupId = childText(project, "groupId");
+    var artifactId = childText(project, "artifactId");
+    if (groupId.isEmpty() || artifactId.isEmpty()) {
+        System.err.println(name + ": pom.xml declares no groupId or artifactId");
+        System.exit(2);
+    }
+    return new Coordinates(groupId.get(), artifactId.get(), Files.readString(versionFile).trim());
+}
+
+/// A network failure must never be reported as "not published": that answer
+/// green-lights an irreversible upload. Retry, then fail loudly as exit 2.
+HttpResponse<Void> probe(HttpClient client, URI uri) throws Exception {
+    Exception failure = null;
+    for (var attempt = 1; attempt <= ATTEMPTS; attempt++) {
+        try {
+            var request = HttpRequest.newBuilder(uri)
+                    .timeout(Duration.ofSeconds(20))
+                    .GET()
+                    .build();
+            return client.send(request, HttpResponse.BodyHandlers.discarding());
+        } catch (IOException e) {
+            failure = e;
+            if (attempt < ATTEMPTS) {
+                Thread.sleep(Duration.ofSeconds(2));
+            }
+        }
+    }
+    throw failure;
+}
+
+void main(String... args) throws Exception {
+    IO.println(name + " " + version);
+    var coordinates = readCoordinates();
+
+    try (var client = HttpClient.newBuilder()
+            .followRedirects(HttpClient.Redirect.NORMAL)
+            .connectTimeout(Duration.ofSeconds(10))
+            .build()) {
+        var status = probe(client, coordinates.uri()).statusCode();
+        switch (status) {
+            case 200 -> IO.println(coordinates.text() + " is published");
+            case 404 -> {
+                IO.println(coordinates.text() + " is not published");
+                System.exit(1);
+            }
+            default -> {
+                System.err.println("%s: unexpected HTTP %d for %s".formatted(name, status, coordinates.uri()));
+                System.exit(2);
+            }
+        }
+    } catch (Exception e) {
+        System.err.println("%s: %s unreachable — %s".formatted(name, coordinates.uri(), e.getMessage()));
+        System.exit(2);
+    }
+}

@@ -1,0 +1,87 @@
+name: Publish to Maven Central
+
+# Manual dispatch only, deliberately. A published Central version can never be
+# replaced or deleted, so nothing automatic may reach this workflow — including
+# release.yml, whose tags are created with GITHUB_TOKEN and therefore do not
+# trigger workflow runs.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# Two concurrent uploads of the same coordinates would race for a version that
+# only one of them can ever own.
+concurrency:
+  group: central-publish
+  cancel-in-progress: false
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: zsmith
+    steps:
+      - uses: actions/checkout@v4
+
+      # Ahead of the republish guard only because that guard is a Java 25 source
+      # script and the runner image has no JDK 25 of its own. The cost is that a
+      # taken version is discovered after the toolchain is provisioned and the
+      # signing key imported, rather than before.
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '25'
+          server-id: central
+          server-username: MAVEN_USERNAME
+          server-password: MAVEN_PASSWORD
+          gpg-private-key: ${{ secrets.GPG_PRIVATE_KEY }}
+          gpg-passphrase: MAVEN_GPG_PASSPHRASE
+
+      # Central rejects a duplicate anyway, but only after a build, a signing
+      # pass and an upload. published reads pom.xml and version.txt from this
+      # directory and exits 0 when the coordinates are already taken.
+      - name: Refuse to republish an existing version
+        run: |
+          if ../.github/workflows/published; then
+            echo "That version is immutable. Run zbump, commit, then dispatch again."
+            exit 1
+          fi
+
+      - name: Fetch zb
+        working-directory: .
+        run: |
+          curl -fL --retry 8 --retry-delay 5 --retry-all-errors \
+            -o zb.jar \
+            https://github.com/AdamBien/zb/releases/latest/download/zb.jar
+
+      # The POM sets maven.test.skip, so Maven's own build verifies nothing.
+      # zunit under zb is the only test gate, and it runs against the same commit
+      # Maven is about to publish.
+      - name: Build and test with zb
+        run: java -jar ../zb.jar
+
+      # version.txt is the source of truth; the literal in pom.xml is allowed to
+      # lag between releases and is overwritten here rather than trusted.
+      - name: Stamp POM version from version.txt
+        run: |
+          mvn -B versions:set \
+            -DnewVersion="$(cat version.txt)" \
+            -DgenerateBackupPoms=false
+
+      - name: Deploy to Central
+        run: mvn -B deploy
+        env:
+          # Central Portal user token — a generated username/password pair,
+          # not the portal login.
+          MAVEN_USERNAME: ${{ secrets.CENTRAL_USERNAME }}
+          MAVEN_PASSWORD: ${{ secrets.CENTRAL_PASSWORD }}
+          MAVEN_GPG_PASSPHRASE: ${{ secrets.GPG_PASSPHRASE }}
+
+      # autoPublish is false in the POM: this uploads and waits for validation,
+      # leaving the irreversible step to a human.
+      - name: Confirm in the Portal
+        run: |
+          echo "Uploaded and validated $(cat version.txt)."
+          echo "Release it at https://central.sonatype.com/publishing/deployments"
