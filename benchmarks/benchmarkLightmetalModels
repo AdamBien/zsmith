@@ -5,7 +5,7 @@ import lm.catalog.control.ModelsDirectory;
 import lm.configuration.control.ZCfg;
 
 String name = MethodHandles.lookup().lookupClass().getName();
-String version = "2026-08-09.2";
+String version = "2026-08-09.3";
 
 /// the child currently under way — read by the shutdown hook, written by the sweep thread
 volatile Process running;
@@ -117,18 +117,46 @@ Outcome run(Args args, LocalModel model, Benchmark benchmark, Path logs, int att
         return Outcome.of("TIMEOUT", elapsed(started));
     }
     var took = elapsed(started);
-    var row = resultRow(outFile, benchmark);
+    var output = new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8);
+    var row = resultRow(output, benchmark);
     var exit = process.exitValue();
     var outcome = row != null
             // a run that printed its row and then died freeing the Metal context still measured
             // what the sweep is after, so the row wins over the exit code
-            ? parseRow(row, took)
+            ? runaway(parseRow(row, took), output)
             // a Metal-level abort exits 134, an OOM kill 137; the reason is in logFile
             : Outcome.of(exit == 0 ? "NO ROW" : "CRASH exit=" + exit, took);
     if (!outcome.measured()) {
-        Log.note("        " + reason(logFile));
+        Log.note("        " + explain(outcome, logFile));
     }
     return outcome;
+}
+
+/// zsmith reports how the agent loop ended; this is the loop giving up at the token ceiling rather
+/// than the model emitting its own end-of-turn token.
+String RAN_TO_TOKEN_LIMIT = "loop end (max_tokens)";
+
+/// Generation that never stopped and produced nothing callable. A chat template the model does not
+/// recognize leaves it emitting text (in the case that prompted this, a control token rendered
+/// literally) until the budget runs out, and the benchmark then scores the silence as a FAIL — which
+/// reads as a model that cannot use tools rather than one that was never asked properly.
+///
+/// The tool-call count is what separates the two: a model that does call tools and only then overruns
+/// the budget writing its answer was measured, and its row stands.
+Outcome runaway(Outcome outcome, String output) {
+    if (!"0".equals(outcome.calls()) || !output.contains(RAN_TO_TOKEN_LIMIT)) {
+        return outcome;
+    }
+    return new Outcome(outcome.served(), outcome.calls(), outcome.turns(), "RUNAWAY", outcome.took());
+}
+
+String explain(Outcome outcome, Path logFile) {
+    if ("RUNAWAY".equals(outcome.result())) {
+        // the stderr log holds only the benchmark's own mismatch diagnostics here, which describe the
+        // symptom rather than the cause
+        return "generation never stopped and nothing parsed as a tool call: chat template or stop token";
+    }
+    return reason(logFile);
 }
 
 /// Why a row is not a measurement, so an unattended sweep says what went wrong without the operator
@@ -155,11 +183,10 @@ String reason(Path logFile) {
 /// progress-bar tick to stdout, and the model's own answer text is echoed too. Match the row
 /// strictly — leading benchmark label, six cells, a PASS/FAIL verdict — and take the last one, so
 /// a table the model happened to write mid-run cannot outrank the real result printed at the end.
-String resultRow(Path outFile, Benchmark benchmark) throws IOException {
+/// The output is decoded with replacement rather than read through Files.lines, because a local
+/// model can emit bytes that are not valid UTF-8 and losing a whole run to that would be absurd.
+String resultRow(String output, Benchmark benchmark) {
     var prefix = "| " + benchmark.label() + " |";
-    // decoding with replacement rather than Files.lines: a local model can emit bytes that are not
-    // valid UTF-8, and losing a whole run to a MalformedInputException would be absurd
-    var output = new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8);
     return output.lines()
             .filter(line -> line.startsWith(prefix))
             .filter(this::isResultRow)

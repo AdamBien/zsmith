@@ -176,60 +176,64 @@ here — and a table row attributing a score to the wrong model is worse than no
 
 ### Sweeping every local model
 
-`benchmarkLightmetalModels` scores every GGUF in lightmetal's catalog against every benchmark, unattended.
-Run it from this directory:
+`benchmarkLightmetalModels` scores every GGUF in lightmetal's catalog against every
+benchmark, unattended. Run it from this directory:
 
 ```
-./benchmarkLightmetalModels -dry-run     # the sweep plan and the exact child command, runs nothing
-./benchmarkLightmetalModels              # every local model, loop=25 parallelism=8 recovery=2
+./benchmarkLightmetalModels -dry-run    # the plan and the exact child command, runs nothing
+./benchmarkLightmetalModels             # every local model, loop=25 parallelism=8 recovery=2
 ./benchmarkLightmetalModels -models:gemma,devstral -loop:10 -timeout:20
 ./benchmarkLightmetalModels -help
 ```
 
-Each run is its own child JVM, launched with `-Dlightmetal.model=<file.gguf>` — a system property
-outranks both `app.properties` files, and zsmith passes the value on to lightmetal, which swaps the
-loaded GGUF. Nothing on disk is edited, and `~/.lightmetal/app.properties` is left alone. One process
-per run is deliberate: a model too large for unified memory aborts inside llama.cpp's Metal backend
-rather than throwing, so isolation is what keeps a bad model from costing the whole sweep.
+Each run is its own child JVM launched with `-Dlightmetal.model=<file.gguf>`: a system
+property outranks both `app.properties` files, and zsmith passes the value to lightmetal,
+which swaps the loaded GGUF. No file is edited, `~/.lightmetal/app.properties` included.
+One process per run is deliberate — a model too large for unified memory aborts inside
+llama.cpp's Metal backend rather than throwing, so isolation is what keeps a bad model
+from costing the whole sweep.
 
-Results land in `results/<timestamp>.md`, appended as each run finishes, so an interrupted sweep keeps
-everything it already measured. Each run's stdout and stderr are captured beside it in
-`results/<timestamp>/`. The table carries one column the single benchmarks cannot:
+Results land in `results/<timestamp>.md`, appended as each run finishes, so an interrupted
+sweep keeps what it measured; each run's stdout and stderr sit in `results/<timestamp>/`.
+The table carries one column the single benchmarks cannot:
 
 | Model file | Served | Benchmark | Size | Calls | Turns | Result | Duration |
 |------------|--------|-----------|------|-------|-------|--------|----------|
 | gemma-4-E2B-it-UD-Q8_K_XL.gguf | Gemma-4-E2B-It | loop | 25 | 1 | – | FAIL | 0:16 |
 | gemma-4-E2B-it-UD-Q8_K_XL.gguf | Gemma-4-E2B-It | parallelism | 8 | 8 | 1 | PASS | 0:02 |
 
-**Model file** is the GGUF that was requested; **Served** is the same value the single benchmarks
-report, read back from the model's own metadata. They are not interchangeable: three quantizations of
-one model all serve the same name, so only the file name says which of them earned the row.
+**Model file** is the GGUF requested; **Served** is what the single benchmarks report, read
+from the model's own metadata. Three quantizations of one model all serve the same name, so
+only the file name says which of them earned the row.
 
-`Result` also carries verdicts the benchmarks themselves never emit, for runs that produced no
-measurement at all:
+`Result` also carries verdicts the benchmarks never emit, for runs that reached no
+measurement:
 
 | Verdict | Meaning |
 |---------|---------|
-| `ERROR` | the model never answered — a failure to load it, or a missing chat template, that the agent loop swallowed |
-| `CRASH exit=<n>` | the child process died; 134 is a Metal abort, 137 an OOM kill |
+| `ERROR` | the model never answered: it failed to load, or had no chat template |
+| `RUNAWAY` | generation never stopped and nothing it produced parsed as a tool call |
+| `CRASH exit=<n>` | the child died; 134 is a Metal abort, 137 an OOM kill |
 | `TIMEOUT` | the run outlived `-timeout` and was killed |
 | `NO ROW` | the child exited cleanly but printed no result row |
 
-`ERROR` is the one worth understanding. When the model cannot be loaded, zsmith catches the
-exception, feeds its text back as the answer and runs on to `max_iterations` — so the benchmark still
-scores the run, as a `FAIL` with an empty `Model` column. Recording that verbatim would blame a model
-that was never actually asked, so the sweep records `ERROR` instead.
+`ERROR` and `RUNAWAY` are the two worth understanding, and both come from a template the
+model does not recognize. On `ERROR` zsmith catches the load failure, feeds its text back as
+the answer and runs on to `max_iterations`, so the benchmark scores the run anyway, as a
+`FAIL` with an empty `Model` column. On `RUNAWAY` the model does answer, but nothing stops
+it: it emits text until the token budget is gone, with no tool call in any of it. Either row
+would otherwise blame a model that was never properly asked. A model that does call tools and
+only then overruns the budget writing its answer was measured, so the tool-call count is what
+separates the two.
 
-The first line of each failure is echoed as it happens and the full output is in that run's `.log`.
-These runs are counted separately in the closing summary: they are not model results, and letting
-them sit among the `FAIL`s would understate every model they touched.
+The first line of each failure is echoed as it happens, the rest is in that run's `.log`, and
+these runs are counted apart from real results in the closing summary.
 
-Models are swept smallest first, so results start arriving within minutes and the models heavy enough
-to strain the host are attempted last. `-max-gb` skips the heavy ones outright, and `-context` lowers
-`context.length` for the sweep when the KV cache on top of a large model's weights is the problem.
-
-Long sweeps are measured in hours. `-resume` picks up an interrupted one, skipping every model and
-benchmark pair already in the results file — delete a row to have it retried.
+Models are swept smallest first, so results arrive within minutes and the models heavy
+enough to strain the host are attempted last. `-max-gb` skips them outright; `-context`
+lowers `context.length` when the KV cache on top of a large model's weights is the problem.
+Long sweeps take hours, and `-resume` picks one up, skipping every model and benchmark pair
+already in the results file; delete a row to have it retried.
 
 ### Match the axis to the workload
 
@@ -274,7 +278,7 @@ row at the edge; well inside the range, one run is enough.
 
 ### What this does not measure
 
-Tool-calling behaviour only. Nothing here scores writing quality, knowledge, or judgement, and
+Tool-calling behavior only. Nothing here scores writing quality, knowledge, or judgment, and
 a model that chases pointers perfectly may still be the wrong one to draft your text.
 
 ## Reproducibility
