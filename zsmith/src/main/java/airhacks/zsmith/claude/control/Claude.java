@@ -15,6 +15,7 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.control.OpenAI;
@@ -309,11 +310,11 @@ public interface Claude {
      */
     static String invoke(String message) {
         Log.agent("requesting claude model: %s".formatted(currentModel.modelName()));
-        var body = sendInstrumented(message, currentModel.modelName(), false);
+        var body = sendInstrumented(message, currentModel.modelName(), 1);
         if (body.statusCode() == 529) {
             Log.error("claude is overloaded, retrying with fallback model: %s".formatted(currentModel.fallbackModelName()));
             var fallbackMessage = replaceModel(message, currentModel.modelName(), currentModel.fallbackModelName());
-            body = sendInstrumented(fallbackMessage, currentModel.fallbackModelName(), true);
+            body = sendInstrumented(fallbackMessage, currentModel.fallbackModelName(), 2);
         }
         if (body.statusCode() != 200) {
             throw new IllegalStateException("claude API error %d at %s: %s".formatted(body.statusCode(), endpoint(), body.body()));
@@ -321,12 +322,15 @@ public interface Claude {
         return body.body();
     }
 
-    static HttpResponse<String> sendInstrumented(String message, String model, boolean fallback) {
+    static HttpResponse<String> sendInstrumented(String message, String model, int attempt) {
         var event = new ClaudeAPICallEvent();
+        var correlation = Correlations.current();
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
         event.begin();
         var response = send(message);
         event.model = model;
-        event.fallback = fallback;
+        event.attempt = attempt;
         event.statusCode = response.statusCode();
         populateUsage(event, response);
         logTokens(event);

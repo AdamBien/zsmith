@@ -6,11 +6,19 @@ import jdk.jfr.Event;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@Name("airhacks.zsmith.subagent.Dispatch")
+@Name(SubAgentDispatchEvent.NAME)
 @Label("Sub-Agent Dispatch")
 @Category({"zsmith", "subagent"})
 @Description("Single delegation of a task to a sub-agent")
 public class SubAgentDispatchEvent extends Event {
+
+    /// The registered event name, so consumers of the stream name it through the
+    /// event that emits it rather than repeating a literal.
+    public static final String NAME = "airhacks.zsmith.subagent.Dispatch";
+
+    @Label("Run Id")
+    @Description("The chat loop that delegated — the child's own turns point back to it as their parent run")
+    public String runId;
 
     @Label("Child Agent")
     public String childAgent;

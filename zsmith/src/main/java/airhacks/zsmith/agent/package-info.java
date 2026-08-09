@@ -29,6 +29,8 @@
 /// - R2.6 — If a chat is requested without a message, then the BC shall reject the request.
 /// - R2.7 — When acting without a user message, the BC shall run the conversation with a generic go trigger.
 /// - R2.8 — The BC shall emit an observable turn event for every loop iteration.
+/// - R2.9 — The BC shall give every turn of one conversation the same run identifier, and where the conversation was started by a delegating run, shall record that run and its depth on each turn. _(why: the events of a run are only joinable if they share a key, and a delegated run is otherwise orphaned)_
+/// - R2.10 — Where transcript storage is enabled, the BC shall store the conversation under the run identifier when the loop ends. _(why: the events carry the key, not the content — the content has to be findable by the same key)_
 ///
 /// ### R3: Execute tools
 /// - R3.1 — If a requested tool is not registered, then the BC shall answer the request with an error result.
@@ -36,6 +38,8 @@
 /// - R3.3 — While a tool's permission resolves to confirm, when the tool is requested, the BC shall ask the user before executing and persist an always or never answer.
 /// - R3.4 — If a tool execution fails, then the BC shall convert the failure into an error result. _(why: errors must flow back to the LLM, not kill the loop)_
 /// - R3.5 — When several parallel-capable tools are requested in one turn, the BC shall execute them concurrently and the remaining tools sequentially.
+/// - R3.6 — When a tool is executed, the BC shall record the run, the iteration, and the requesting tool-use identifier on the invocation event, and the failure type when the tool throws. _(why: an outcome of error says a run went wrong, not in what way)_
+/// - R3.7 — When a tool is executed concurrently, the BC shall make the run identifier available to what the tool itself invokes. _(why: a scoped binding does not cross an executor, so nested memory, LLM and sub-agent events would leave the run)_
 ///
 /// ### R4: Equip capabilities
 /// - R4.1 — When a tool is registered, the BC shall expose its definition to the LLM on every invocation.
@@ -56,7 +60,7 @@
 ///
 /// ## Entities
 /// - AgentDefaults — configurable fallbacks for name, system prompt, iteration limit, temperature
-/// - AgentTurnEvent — observable record of one loop iteration
+/// - AgentTurnEvent — observable record of one loop iteration, carrying the run it belongs to
 ///
 /// ## Out of scope
 /// - LLM transport and API protocol (`llm`)
@@ -65,4 +69,7 @@
 /// - episodic memory persistence (`episodicmemory`)
 /// - HTTP server and session transport (`http`)
 /// - sub-agent dispatch mechanics (`subagent`)
+/// - the identity a run is recorded under and how it propagates (`correlation`)
+/// - transcript storage and its format (`transcripts`)
+/// - reading the recorded events back (`telemetry`)
 package airhacks.zsmith.agent;

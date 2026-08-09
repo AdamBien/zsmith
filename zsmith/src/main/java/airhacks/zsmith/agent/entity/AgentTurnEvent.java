@@ -6,14 +6,30 @@ import jdk.jfr.Event;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@Name("airhacks.zsmith.agent.Turn")
+@Name(AgentTurnEvent.NAME)
 @Label("Agent Turn")
 @Category({"zsmith", "agent"})
 @Description("One iteration of the chat loop: Claude invocation plus optional tool execution")
 public class AgentTurnEvent extends Event {
 
+    /// The registered event name, so consumers of the stream name it through the
+    /// event that emits it rather than repeating a literal.
+    public static final String NAME = "airhacks.zsmith.agent.Turn";
+
     @Label("Agent Name")
     public String agentName;
+
+    @Label("Run Id")
+    @Description("Groups every event of one chat loop")
+    public String runId;
+
+    @Label("Parent Run Id")
+    @Description("The run that delegated to this one, blank for a top-level chat")
+    public String parentRunId;
+
+    @Label("Depth")
+    @Description("Position in the sub-agent tree, 0 for a top-level chat")
+    public int depth;
 
     @Label("Iteration")
     public int iteration;

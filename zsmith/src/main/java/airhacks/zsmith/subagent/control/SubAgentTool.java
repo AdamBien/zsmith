@@ -8,6 +8,7 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.tools.control.ToolHandler;
@@ -16,7 +17,6 @@ public class SubAgentTool implements ToolHandler {
 
     static final int DEFAULT_MAX_DEPTH = 3;
     static final String FIRST_RUN_MARKER = ".first_run_completed";
-    static final ScopedValue<Integer> DEPTH = ScopedValue.newInstance();
 
     private final Agent subAgent;
     private final String name;
@@ -81,8 +81,10 @@ public class SubAgentTool implements ToolHandler {
     @Override
     public String execute(JSONObject input) {
         var event = new SubAgentDispatchEvent();
+        var correlation = Correlations.current();
         event.childAgent = this.subAgent.name();
-        event.depth = DEPTH.orElse(0);
+        event.runId = correlation.runId();
+        event.depth = correlation.depth();
         var firstRunDone = firstRunCompleted();
         event.firstRun = !firstRunDone;
         event.mode = (this.runParallel && firstRunDone) ? "parallel" : "sequential";
@@ -104,7 +106,7 @@ public class SubAgentTool implements ToolHandler {
             event.taskSize = task.length();
             Log.subagent("delegating to sub-agent '%s': %s".formatted(this.subAgent.name(), task));
             try {
-                var result = ScopedValue.where(DEPTH, event.depth + 1)
+                var result = ScopedValue.where(Correlations.CURRENT, correlation.deeper())
                         .call(() -> this.subAgent.chat(task));
                 Log.subagent("sub-agent '%s' completed".formatted(this.subAgent.name()));
                 markFirstRunCompleted();

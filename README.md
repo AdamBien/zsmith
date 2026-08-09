@@ -531,13 +531,41 @@ Open `calculator.jfr` in JDK Mission Control and filter the event browser by cat
 | Event | Category | What it captures |
 |-------|----------|------------------|
 | `airhacks.zsmith.agent.Turn` | `zsmith / agent` | One iteration of the chat loop with stop reason and tool counts |
-| `airhacks.zsmith.claude.APICall` | `zsmith / claude` | HTTP call to the Anthropic Messages API with token usage |
-| `airhacks.zsmith.tools.Invocation` | `zsmith / tools` | Single tool execution with outcome and result size |
+| `airhacks.zsmith.claude.APICall` | `zsmith / claude` | HTTP call to the Anthropic Messages API with token usage and attempt number |
+| `airhacks.zsmith.tools.Invocation` | `zsmith / tools` | Single tool execution with outcome, result size, and failure type |
 | `airhacks.zsmith.subagent.Dispatch` | `zsmith / subagent` | Delegation to a sub-agent |
 | `airhacks.zsmith.skills.Load` | `zsmith / skills` | Skill read from disk during `SkillStore` init |
 | `airhacks.zsmith.memory.Access` | `zsmith / memory` | Read or write of a persistent memory store |
 
 For a focused recording, pass a custom `.jfc` file enabling only the `airhacks.zsmith.*` events via `settings=zsmith.jfc`.
+
+### Correlation
+
+Every event of one `chat` or `act` invocation carries the same `runId`, so the recording can be grouped instead of guessed at — a tool call issued in parallel runs on its own virtual thread, which makes timestamps and thread ids useless for the job. `Turn` events also carry `iteration`, `depth`, and `parentRunId`, so a delegated run points back at the run that delegated to it and the sub-agent tree can be reconstructed. `Invocation` events carry the model's own `toolUseId`, which ties the event to the exact content block that requested it.
+
+Filter by `runId` in JDK Mission Control to see one conversation end to end, or read it in code:
+
+```java
+var reports = EventLog.replay(Path.of("calculator.jfr"));
+reports.values().stream()
+        .filter(RunReport::incomplete)
+        .forEach(report -> IO.println(report.summary()));
+```
+
+`EventLog.replay(Path)` reads a finished recording whole, which is what you want for anything whose number gets compared against another run's. `EventLog.live()` consumes this JVM's events as they are flushed — start it *before* constructing the agent it should observe, since events committed before the stream is running are never delivered, and a flush interval sits between a commit and the stream seeing it.
+
+The events deliberately carry no content: no prompts, no tool inputs, no error messages. JFR interns strings per chunk, so verbatim payloads would neither deduplicate nor stay small, and a `.jfr` is an artifact people hand around with no redaction stage. What the stream gives you is which run to look at; what happened in it lives in the transcript.
+
+### Transcripts
+
+Set `transcripts.enabled=true` to store each conversation under its `runId` in the agent's own database, next to its memories and improvement backlog:
+
+```properties
+# ~/.zsmith/app.properties
+transcripts.enabled=true
+```
+
+Off by default — this writes whole conversations to disk. Records are browsable XHTML pages under `~/.zsmith/[agentName]/memory/transcripts/`, and readable in code through `TranscriptLog.forAgent(name).read(runId)`.
 
 ## Benchmarks
 

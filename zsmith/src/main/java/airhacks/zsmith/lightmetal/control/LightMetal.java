@@ -8,6 +8,7 @@ import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
@@ -39,6 +40,9 @@ public interface LightMetal {
         Log.llm(">> " + payloadString);
 
         var event = new LightMetalAPICallEvent();
+        var correlation = Correlations.current();
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
         event.begin();
         event.model = payload.optString("model", "(from lightmetal config)");
         Log.agent("invoking lightmetal model: " + event.model);

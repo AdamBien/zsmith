@@ -6,11 +6,19 @@ import jdk.jfr.Event;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
-@Name("airhacks.zsmith.memory.Access")
+@Name(MemoryAccessEvent.NAME)
 @Label("Memory Access")
 @Category({"zsmith", "memory"})
 @Description("Read or write of a persistent memory store")
 public class MemoryAccessEvent extends Event {
+
+    /// The registered event name, so consumers of the stream name it through the
+    /// event that emits it rather than repeating a literal.
+    public static final String NAME = "airhacks.zsmith.memory.Access";
+
+    @Label("Run Id")
+    @Description("The chat loop this access happened in, blank for loads at store construction")
+    public String runId;
 
     @Label("Store")
     public String store;

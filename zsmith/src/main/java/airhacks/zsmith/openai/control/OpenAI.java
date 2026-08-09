@@ -12,6 +12,7 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
@@ -46,6 +47,9 @@ public interface OpenAI {
         Log.llm(">> " + payloadString);
 
         var event = new OpenAIAPICallEvent();
+        var correlation = Correlations.current();
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
         event.begin();
         event.model = model();
         var response = send(payloadString);

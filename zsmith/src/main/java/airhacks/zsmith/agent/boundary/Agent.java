@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -19,6 +20,8 @@ import airhacks.zsmith.agent.entity.AgentTurnEvent;
 import airhacks.zsmith.llm.control.LLM;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.correlation.control.Correlations;
+import airhacks.zsmith.correlation.entity.Correlation;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.control.RecallMemoryTool;
 import airhacks.zsmith.episodicmemory.control.StoreMemoryTool;
@@ -46,6 +49,8 @@ import airhacks.zsmith.tools.control.ToolPermission;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
 import airhacks.zsmith.tools.entity.ToolResult;
 import airhacks.zsmith.tools.entity.ToolUse;
+import airhacks.zsmith.transcripts.boundary.TranscriptLog;
+import airhacks.zsmith.transcripts.entity.Transcript;
 
 public record Agent(String name, String systemPrompt, Memory memory, Map<String, ToolHandler> tools, int maxIterations,
         float temperature, EpisodicMemoryStore episodicMemory) {
@@ -260,9 +265,17 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         return array;
     }
 
-    ToolResult executeTool(ToolUse toolUse) {
+    /// Takes the correlation as an argument rather than reading it from the ambient scope:
+    /// parallel-capable tools are submitted to a virtual-thread executor, which does not
+    /// inherit scoped value bindings. It is re-bound around the tool body so that whatever
+    /// the tool reaches — episodic memory, a nested agent, another LLM call — records the
+    /// same run, on whichever thread it ends up.
+    ToolResult executeTool(ToolUse toolUse, Correlation correlation) {
         var event = new ToolInvocationEvent();
         event.agentName = this.name;
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
+        event.toolUseId = toolUse.id();
         event.toolName = toolUse.name();
         event.begin();
         try {
@@ -297,7 +310,8 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             try {
                 Log.tool("→ %s %s".formatted(toolUse.name(), truncate(String.valueOf(toolUse.input()), 200)));
                 var start = System.currentTimeMillis();
-                var result = tool.execute(toolUse.input());
+                var result = ScopedValue.where(Correlations.CURRENT, correlation)
+                        .call(() -> tool.execute(toolUse.input()));
                 var duration = System.currentTimeMillis() - start;
                 Log.tool("← %s %s".formatted(toolUse.name(), result == null ? "<null>" : truncate(result, 200)));
                 Log.toolEnd("%s %dms".formatted(toolUse.name(), duration));
@@ -307,6 +321,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             } catch (Exception e) {
                 Log.tool("tool error: " + toolUse.name() + " — " + e.getMessage());
                 event.outcome = "error";
+                event.errorType = e.getClass().getSimpleName();
                 return ToolResult.error(toolUse.id(), e.getMessage());
             }
         } finally {
@@ -344,22 +359,34 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
 
     String chatLoop(ProgressBar progress) {
         var toolCounts = new HashMap<String, Integer>();
+        /// Blank and depth 0 for a top-level chat; the delegating run and its depth when a
+        /// sub-agent is running, which is what links a child run back into the tree.
+        var parent = Correlations.current();
+        var runId = UUID.randomUUID().toString();
         String lastText = null;
         String exitReason = "max_iterations";
+        int turns = 0;
         try {
         for (int iteration = 0; iteration < this.maxIterations; iteration++) {
+            turns = iteration + 1;
+            var correlation = new Correlation(runId, iteration, parent.depth());
             var turnEvent = new AgentTurnEvent();
             turnEvent.agentName = this.name;
+            turnEvent.runId = runId;
+            turnEvent.parentRunId = parent.runId();
+            turnEvent.depth = parent.depth();
             turnEvent.iteration = iteration;
             turnEvent.begin();
             try {
                 progress.update(iteration + 1);
-                var response = LLM.invoke(
-                        this.systemPrompt,
-                        this.memory.toJSON(),
-                        toolDefinitions(),
-                        this.temperature,
-                        ToolChoice.forTurn(iteration));
+                var toolChoice = ToolChoice.forTurn(iteration);
+                var response = ScopedValue.where(Correlations.CURRENT, correlation)
+                        .call(() -> LLM.invoke(
+                                this.systemPrompt,
+                                this.memory.toJSON(),
+                                toolDefinitions(),
+                                this.temperature,
+                                toolChoice));
                 progress.addLLMInvocation();
 
                 var content = response.getJSONArray("content");
@@ -404,7 +431,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 if (!parallelTools.isEmpty()) {
                     try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
                         var futures = parallelTools.stream()
-                                .map(tu -> Map.entry(tu, executor.submit(() -> executeTool(tu))))
+                                .map(tu -> Map.entry(tu, executor.submit(() -> executeTool(tu, correlation))))
                                 .toList();
                         for (var entry : futures) {
                             try {
@@ -416,7 +443,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                     }
                 }
                 for (var toolUse : sequentialTools) {
-                    var result = executeTool(toolUse);
+                    var result = executeTool(toolUse, correlation);
                     toolResults.put(result.toContentBlock());
                 }
                 progress.addToolInvocations(toolUses.size());
@@ -437,8 +464,20 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             if (lastText != null) {
                 Log.agent("last assistant text: " + truncate(lastText, 500));
             }
+            storeTranscript(runId, exitReason, turns);
             progress.summary();
         }
+    }
+
+    /// The payload half of the claim check: the events of this run carry `runId`, this stores
+    /// what was actually said under the same key. Off unless `transcripts.enabled` says
+    /// otherwise — writing every conversation to disk is the user's decision.
+    void storeTranscript(String runId, String exitReason, int turns) {
+        if (!TranscriptLog.enabled()) {
+            return;
+        }
+        TranscriptLog.forAgent(this.name)
+                .save(Transcript.of(runId, this.name, exitReason, turns, this.memory.toJSON().toString()));
     }
 
     static String truncate(String text, int max) {

@@ -20,6 +20,7 @@ import java.util.stream.Stream;
 import airhacks.zsmith.json.JSONArray;
 
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.episodicmemory.entity.Episode;
 import airhacks.zsmith.episodicmemory.entity.MemoryAccessEvent;
 import airhacks.zsmith.episodicmemory.entity.MemoryType;
@@ -218,6 +219,7 @@ public class EpisodicMemoryStore {
 
     void save(Episode episode) {
         var event = new MemoryAccessEvent();
+        event.runId = Correlations.current().runId();
         event.store = "episodic";
         event.operation = "save";
         event.episodeCount = size();
@@ -239,6 +241,7 @@ public class EpisodicMemoryStore {
 
     void load() {
         var event = new MemoryAccessEvent();
+        event.runId = Correlations.current().runId();
         event.store = "episodic";
         event.operation = "load";
         event.begin();
