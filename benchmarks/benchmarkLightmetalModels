@@ -5,7 +5,7 @@ import lm.catalog.control.ModelsDirectory;
 import lm.configuration.control.ZCfg;
 
 String name = MethodHandles.lookup().lookupClass().getName();
-String version = "2026-08-09.1";
+String version = "2026-08-09.2";
 
 /// the child currently under way — read by the shutdown hook, written by the sweep thread
 volatile Process running;
@@ -46,7 +46,9 @@ void sweep(Args args, List<LocalModel> models, List<Benchmark> benchmarks) throw
 
     var total = models.size() * benchmarks.size() * args.repeat();
     var current = 0;
+    var attempted = 0;
     var passed = 0;
+    var unmeasured = 0;
     var started = System.nanoTime();
     Runtime.getRuntime().addShutdownHook(new Thread(this::killRunning, "sweep-shutdown"));
 
@@ -66,8 +68,12 @@ void sweep(Args args, List<LocalModel> models, List<Benchmark> benchmarks) throw
                 Files.writeString(results, row + System.lineSeparator(),
                         StandardOpenOption.CREATE, StandardOpenOption.APPEND);
                 IO.println(row);
+                attempted++;
                 if ("PASS".equals(outcome.result())) {
                     passed++;
+                }
+                if (!outcome.measured()) {
+                    unmeasured++;
                 }
                 // macOS does not reclaim a tens-of-GB mapping the instant the child exits, and the
                 // next child mmaps its weights immediately
@@ -75,7 +81,13 @@ void sweep(Args args, List<LocalModel> models, List<Benchmark> benchmarks) throw
             }
         }
     }
-    Log.note("%d/%d PASS in %s — %s".formatted(passed, current, elapsed(started), args.out()));
+    var summary = "%d/%d PASS in %s — %s".formatted(passed, attempted, elapsed(started), args.out());
+    if (unmeasured > 0) {
+        // these are not model results: they never reached a verdict, and averaging them in with the
+        // FAILs would understate every model they touched
+        summary += " · %d run(s) produced no result".formatted(unmeasured);
+    }
+    Log.note(summary);
 }
 
 /// One child JVM per run. A model that does not fit unified memory aborts inside llama.cpp's Metal
@@ -106,14 +118,37 @@ Outcome run(Args args, LocalModel model, Benchmark benchmark, Path logs, int att
     }
     var took = elapsed(started);
     var row = resultRow(outFile, benchmark);
-    if (row != null) {
-        // a run that printed its row and then died freeing the Metal context still measured what
-        // the sweep is after, so the row wins over the exit code
-        return parseRow(row, took);
-    }
     var exit = process.exitValue();
-    // a Metal-level abort exits 134, an OOM kill 137; the reason is in logFile
-    return Outcome.of(exit == 0 ? "NO ROW" : "CRASH exit=" + exit, took);
+    var outcome = row != null
+            // a run that printed its row and then died freeing the Metal context still measured
+            // what the sweep is after, so the row wins over the exit code
+            ? parseRow(row, took)
+            // a Metal-level abort exits 134, an OOM kill 137; the reason is in logFile
+            : Outcome.of(exit == 0 ? "NO ROW" : "CRASH exit=" + exit, took);
+    if (!outcome.measured()) {
+        Log.note("        " + reason(logFile));
+    }
+    return outcome;
+}
+
+/// Why a row is not a measurement, so an unattended sweep says what went wrong without the operator
+/// opening a log for every non-result. zsmith's own error line is the best answer; failing that the
+/// first line still is, because a native abort puts its GGML_ASSERT there and dumps a backtrace after.
+String reason(Path logFile) {
+    try {
+        var lines = new String(Files.readAllBytes(logFile), StandardCharsets.UTF_8).lines()
+                .map(line -> line.replaceAll("\033\\[[0-9;]*m", "").strip())
+                .filter(line -> !line.isEmpty())
+                .toList();
+        var reported = lines.stream()
+                .filter(line -> line.startsWith("❌"))
+                .findFirst()
+                .or(() -> lines.stream().findFirst())
+                .orElse("see " + logFile);
+        return reported.length() > 160 ? reported.substring(0, 160) + "…" : reported;
+    } catch (IOException problem) {
+        return "see " + logFile;
+    }
 }
 
 /// The benchmark's row is one line among hundreds: zsmith logs every agent turn, tool call and
@@ -325,10 +360,20 @@ String HEADER = """
         | Model file | Served | Benchmark | Size | Calls | Turns | Result | Duration |
         |------------|--------|-----------|------|-------|-------|--------|----------|""";
 
+/// zsmith fills the Model column from the last response it saw, and lightmetal always stamps the
+/// GGUF it served — so this placeholder, which zsmith only ever leaves in place, proves that not one
+/// response came back.
+String NO_RESPONSE = "unknown";
+
 record Outcome(String served, String calls, String turns, String result, String took) {
 
     static Outcome of(String result, String took) {
         return new Outcome("–", "–", "–", result, took);
+    }
+
+    /// whether the model actually answered and was scored, as opposed to the run falling over
+    boolean measured() {
+        return "PASS".equals(this.result) || "FAIL".equals(this.result);
     }
 }
 
@@ -338,7 +383,14 @@ Outcome parseRow(String row, String took) {
         return Outcome.of("CRASH", took);
     }
     // | benchmark | model | size | calls | turns | result |
-    return new Outcome(cells.get(2), cells.get(4), cells.get(5), cells.get(6), took);
+    var served = cells.get(2);
+    if (NO_RESPONSE.equals(served)) {
+        // The agent loop swallows a model-load or chat-template failure, feeds the exception text
+        // back as the answer and runs on to max_iterations, so the benchmark still scores the run —
+        // as a FAIL. Recording that verbatim would blame the model for never having been asked.
+        return Outcome.of("ERROR", took);
+    }
+    return new Outcome(served, cells.get(4), cells.get(5), cells.get(6), took);
 }
 
 String resultsRow(LocalModel model, Benchmark benchmark, Outcome outcome) {

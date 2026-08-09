@@ -205,9 +205,24 @@ everything it already measured. Each run's stdout and stderr are captured beside
 report, read back from the model's own metadata. They are not interchangeable: three quantizations of
 one model all serve the same name, so only the file name says which of them earned the row.
 
-`Result` also carries the driver's own verdicts — `TIMEOUT` when a run outlived `-timeout`,
-`CRASH exit=<n>` when the child died (134 is a Metal abort, 137 an OOM kill). The reason is in that
-run's `.log`.
+`Result` also carries verdicts the benchmarks themselves never emit, for runs that produced no
+measurement at all:
+
+| Verdict | Meaning |
+|---------|---------|
+| `ERROR` | the model never answered — a failure to load it, or a missing chat template, that the agent loop swallowed |
+| `CRASH exit=<n>` | the child process died; 134 is a Metal abort, 137 an OOM kill |
+| `TIMEOUT` | the run outlived `-timeout` and was killed |
+| `NO ROW` | the child exited cleanly but printed no result row |
+
+`ERROR` is the one worth understanding. When the model cannot be loaded, zsmith catches the
+exception, feeds its text back as the answer and runs on to `max_iterations` — so the benchmark still
+scores the run, as a `FAIL` with an empty `Model` column. Recording that verbatim would blame a model
+that was never actually asked, so the sweep records `ERROR` instead.
+
+The first line of each failure is echoed as it happens and the full output is in that run's `.log`.
+These runs are counted separately in the closing summary: they are not model results, and letting
+them sit among the `FAIL`s would understate every model they touched.
 
 Models are swept smallest first, so results start arriving within minutes and the models heavy enough
 to strain the host are attempted last. `-max-gb` skips the heavy ones outright, and `-context` lowers

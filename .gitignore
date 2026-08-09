@@ -19,3 +19,4 @@ buildNumber.properties
 # benchmarkLightmetalModels keeps its result tables (benchmarks/results/*.md) but not the
 # per-run stdout/stderr captures, which are large and only useful while diagnosing a run
 benchmarks/results/*/
+benchmarks/results
