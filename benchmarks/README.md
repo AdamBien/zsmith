@@ -174,6 +174,48 @@ Then check the **Model** column against what you configured. It reports the mode
 answered, not the one you asked for, so a 529 fallback or a LightMetal-side default shows up
 here — and a table row attributing a score to the wrong model is worse than no row.
 
+### Sweeping every local model
+
+`benchmarkLightmetalModels` scores every GGUF in lightmetal's catalog against every benchmark, unattended.
+Run it from this directory:
+
+```
+./benchmarkLightmetalModels -dry-run     # the sweep plan and the exact child command, runs nothing
+./benchmarkLightmetalModels              # every local model, loop=25 parallelism=8 recovery=2
+./benchmarkLightmetalModels -models:gemma,devstral -loop:10 -timeout:20
+./benchmarkLightmetalModels -help
+```
+
+Each run is its own child JVM, launched with `-Dlightmetal.model=<file.gguf>` — a system property
+outranks both `app.properties` files, and zsmith passes the value on to lightmetal, which swaps the
+loaded GGUF. Nothing on disk is edited, and `~/.lightmetal/app.properties` is left alone. One process
+per run is deliberate: a model too large for unified memory aborts inside llama.cpp's Metal backend
+rather than throwing, so isolation is what keeps a bad model from costing the whole sweep.
+
+Results land in `results/<timestamp>.md`, appended as each run finishes, so an interrupted sweep keeps
+everything it already measured. Each run's stdout and stderr are captured beside it in
+`results/<timestamp>/`. The table carries one column the single benchmarks cannot:
+
+| Model file | Served | Benchmark | Size | Calls | Turns | Result | Duration |
+|------------|--------|-----------|------|-------|-------|--------|----------|
+| gemma-4-E2B-it-UD-Q8_K_XL.gguf | Gemma-4-E2B-It | loop | 25 | 1 | – | FAIL | 0:16 |
+| gemma-4-E2B-it-UD-Q8_K_XL.gguf | Gemma-4-E2B-It | parallelism | 8 | 8 | 1 | PASS | 0:02 |
+
+**Model file** is the GGUF that was requested; **Served** is the same value the single benchmarks
+report, read back from the model's own metadata. They are not interchangeable: three quantizations of
+one model all serve the same name, so only the file name says which of them earned the row.
+
+`Result` also carries the driver's own verdicts — `TIMEOUT` when a run outlived `-timeout`,
+`CRASH exit=<n>` when the child died (134 is a Metal abort, 137 an OOM kill). The reason is in that
+run's `.log`.
+
+Models are swept smallest first, so results start arriving within minutes and the models heavy enough
+to strain the host are attempted last. `-max-gb` skips the heavy ones outright, and `-context` lowers
+`context.length` for the sweep when the KV cache on top of a large model's weights is the problem.
+
+Long sweeps are measured in hours. `-resume` picks up an interrupted one, skipping every model and
+benchmark pair already in the results file — delete a row to have it retried.
+
 ### Match the axis to the workload
 
 The three benchmarks are orthogonal by design, so there is no aggregate score to rank models

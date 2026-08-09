@@ -1,0 +1,604 @@
+#!/usr/bin/java --enable-native-access=ALL-UNNAMED --class-path=../zsmith/zbo/lightmetal.jar --source 25
+
+import lm.catalog.boundary.ModelCatalog;
+import lm.catalog.control.ModelsDirectory;
+import lm.configuration.control.ZCfg;
+
+String name = MethodHandles.lookup().lookupClass().getName();
+String version = "2026-08-09.1";
+
+/// the child currently under way — read by the shutdown hook, written by the sweep thread
+volatile Process running;
+
+void main(String... args) throws Exception {
+    IO.println(name + " " + version);
+    var parsed = parseArgs(args);
+    if (parsed == null) {
+        return;
+    }
+    ZCfg.load("lightmetal");
+
+    var benchmarks = selectedBenchmarks(parsed);
+    requireBenchmarksDirectory(benchmarks);
+    requireLightMetal(benchmarks);
+    var models = selectedModels(parsed);
+    if (models.isEmpty()) {
+        Log.stop("no models matched in " + ModelsDirectory.path());
+    }
+
+    if (parsed.dryRun()) {
+        printPlan(parsed, models, benchmarks);
+        return;
+    }
+    sweep(parsed, models, benchmarks);
+}
+
+// -------------------------------------------------------------------------------------------
+// sweep
+// -------------------------------------------------------------------------------------------
+
+void sweep(Args args, List<LocalModel> models, List<Benchmark> benchmarks) throws Exception {
+    var results = Path.of(args.out());
+    var logs = logDirectory(results);
+    Files.createDirectories(logs);
+    var done = args.resume() ? completed(results) : Set.<String>of();
+    startResults(results, args, models, benchmarks);
+
+    var total = models.size() * benchmarks.size() * args.repeat();
+    var current = 0;
+    var passed = 0;
+    var started = System.nanoTime();
+    Runtime.getRuntime().addShutdownHook(new Thread(this::killRunning, "sweep-shutdown"));
+
+    for (var model : models) {
+        for (var benchmark : benchmarks) {
+            for (var attempt = 1; attempt <= args.repeat(); attempt++) {
+                current++;
+                var label = "[%d/%d] %s %s(%d)".formatted(current, total, model.fileName(),
+                        benchmark.label(), benchmark.size());
+                if (done.contains(key(model.fileName(), benchmark.label()))) {
+                    Log.note(label + " — already in " + args.out() + ", skipped");
+                    continue;
+                }
+                Log.note(label + " — " + model.gigabytes() + " GB, running…");
+                var outcome = run(args, model, benchmark, logs, attempt);
+                var row = resultsRow(model, benchmark, outcome);
+                Files.writeString(results, row + System.lineSeparator(),
+                        StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+                IO.println(row);
+                if ("PASS".equals(outcome.result())) {
+                    passed++;
+                }
+                // macOS does not reclaim a tens-of-GB mapping the instant the child exits, and the
+                // next child mmaps its weights immediately
+                Thread.sleep(Duration.ofSeconds(2));
+            }
+        }
+    }
+    Log.note("%d/%d PASS in %s — %s".formatted(passed, current, elapsed(started), args.out()));
+}
+
+/// One child JVM per run. A model that does not fit unified memory aborts inside llama.cpp's Metal
+/// backend instead of throwing, and a failed model swap leaves lightmetal holding a closed handle —
+/// so an unattended sweep can only stay safe if a bad model costs one row rather than the run.
+Outcome run(Args args, LocalModel model, Benchmark benchmark, Path logs, int attempt)
+        throws Exception {
+    var stem = "%s-%s%s".formatted(model.stem(), benchmark.label(),
+            args.repeat() > 1 ? "-" + attempt : "");
+    var outFile = logs.resolve(stem + ".out");
+    var logFile = logs.resolve(stem + ".log");
+
+    var started = System.nanoTime();
+    var process = new ProcessBuilder(command(args, model, benchmark))
+            // the benchmarks' shebang class path is relative (../zsmith/zbo/…), so the child has to
+            // run where the driver runs
+            .directory(Path.of("").toAbsolutePath().toFile())
+            // both streams go to files: zsmith logs agent turns, tool calls and a progress bar to
+            // stdout, so a pipe would fill and deadlock the child long before it finished
+            .redirectOutput(outFile.toFile())
+            .redirectError(logFile.toFile())
+            .start();
+    this.running = process;
+
+    if (!process.waitFor(args.timeoutMinutes(), TimeUnit.MINUTES)) {
+        kill(process);
+        return Outcome.of("TIMEOUT", elapsed(started));
+    }
+    var took = elapsed(started);
+    var row = resultRow(outFile, benchmark);
+    if (row != null) {
+        // a run that printed its row and then died freeing the Metal context still measured what
+        // the sweep is after, so the row wins over the exit code
+        return parseRow(row, took);
+    }
+    var exit = process.exitValue();
+    // a Metal-level abort exits 134, an OOM kill 137; the reason is in logFile
+    return Outcome.of(exit == 0 ? "NO ROW" : "CRASH exit=" + exit, took);
+}
+
+/// The benchmark's row is one line among hundreds: zsmith logs every agent turn, tool call and
+/// progress-bar tick to stdout, and the model's own answer text is echoed too. Match the row
+/// strictly — leading benchmark label, six cells, a PASS/FAIL verdict — and take the last one, so
+/// a table the model happened to write mid-run cannot outrank the real result printed at the end.
+String resultRow(Path outFile, Benchmark benchmark) throws IOException {
+    var prefix = "| " + benchmark.label() + " |";
+    // decoding with replacement rather than Files.lines: a local model can emit bytes that are not
+    // valid UTF-8, and losing a whole run to a MalformedInputException would be absurd
+    var output = new String(Files.readAllBytes(outFile), StandardCharsets.UTF_8);
+    return output.lines()
+            .filter(line -> line.startsWith(prefix))
+            .filter(this::isResultRow)
+            .reduce((first, last) -> last)
+            .orElse(null);
+}
+
+boolean isResultRow(String line) {
+    var cells = line.split("\\|", -1);
+    if (cells.length != 8) {
+        return false;
+    }
+    var verdict = cells[6].trim();
+    return "PASS".equals(verdict) || "FAIL".equals(verdict);
+}
+
+void kill(Process process) throws InterruptedException {
+    // SIGKILL, not SIGTERM: a terminating child runs lightmetal's shutdown hook, which closes a
+    // live Metal context and can hang — defeating the very timeout being enforced
+    process.descendants().forEach(ProcessHandle::destroyForcibly);
+    process.destroyForcibly();
+    process.waitFor();
+}
+
+/// Ctrl-C already signals the whole foreground process group, but a kill aimed at the driver alone
+/// would otherwise orphan a child holding tens of GB of model weights.
+void killRunning() {
+    var child = this.running;
+    if (child != null && child.isAlive()) {
+        child.descendants().forEach(ProcessHandle::destroyForcibly);
+        child.destroyForcibly();
+    }
+}
+
+/// `-Dlightmetal.model` is the whole trick: zsmith's ZCfg ranks system properties above both
+/// app.properties files, zsmith copies the value into the request payload's `model` field, and
+/// lightmetal resolves that field against its catalog and swaps the loaded GGUF. No file is touched.
+List<String> command(Args args, LocalModel model, Benchmark benchmark) throws IOException {
+    var command = new ArrayList<String>();
+    command.add(Path.of(System.getProperty("java.home"), "bin", "java").toString());
+    command.add("-Dlightmetal.model=" + model.fileName());
+    command.add("-Dprogress=false");
+    // WriteClipboardTool reports failures instead of throwing, so headless simply stops every run
+    // in the sweep from overwriting the clipboard
+    command.add("-Djava.awt.headless=true");
+    if (args.contextLength() > 0) {
+        command.add("-Dcontext.length=" + args.contextLength());
+    }
+    command.addAll(shebangFlags(benchmark.script()));
+    command.add(benchmark.script());
+    command.add(String.valueOf(benchmark.size()));
+    return List.copyOf(command);
+}
+
+/// The child's JVM flags are read from the benchmark's own shebang rather than repeated here, so
+/// editing a benchmark script cannot silently drift from the way this sweep launches it. Splitting
+/// on whitespace holds as long as no flag value contains a space.
+List<String> shebangFlags(String script) throws IOException {
+    var lines = Files.readAllLines(Path.of(script));
+    var shebang = lines.isEmpty() ? "" : lines.getFirst();
+    if (!shebang.startsWith("#!")) {
+        Log.stop(script + ": no shebang on line 1 — cannot derive the JVM flags");
+    }
+    var flags = new ArrayList<String>();
+    var afterInterpreter = false;
+    for (var token : shebang.substring(2).trim().split("\\s+")) {
+        if (afterInterpreter) {
+            flags.add(token);
+        } else {
+            afterInterpreter = token.endsWith("java");
+        }
+    }
+    return List.copyOf(flags);
+}
+
+// -------------------------------------------------------------------------------------------
+// models
+// -------------------------------------------------------------------------------------------
+
+List<LocalModel> selectedModels(Args args) {
+    var names = args.modelFragments().isEmpty()
+            ? ModelCatalog.list()
+            : args.modelFragments().stream()
+                    .flatMap(fragment -> ModelCatalog.search(fragment).stream())
+                    .distinct()
+                    .toList();
+    return names.stream()
+            .map(fileName -> new LocalModel(fileName, totalBytes(fileName)))
+            .filter(model -> args.maxBytes() == 0 || model.bytes() <= args.maxBytes())
+            // smallest first: results accumulate early and the models heavy enough to wedge the host
+            // are attempted last, when everything else has already been recorded
+            .sorted(Comparator.comparingLong(LocalModel::bytes))
+            .toList();
+}
+
+/// ModelCatalog lists only the first shard of a multi-shard set, but both the sweep order and the
+/// -max-gb guard care about the weight of the whole set.
+long totalBytes(String fileName) {
+    var primary = ModelCatalog.resolve(fileName);
+    var prefix = shardPrefix(fileName);
+    if (prefix == null) {
+        return sizeOf(primary);
+    }
+    try (var siblings = Files.list(primary.getParent())) {
+        return siblings.map(path -> path.getFileName().toString())
+                .filter(sibling -> sibling.startsWith(prefix) && ModelCatalog.isModel(sibling))
+                .mapToLong(sibling -> sizeOf(ModelCatalog.resolve(sibling)))
+                .sum();
+    } catch (IOException problem) {
+        return sizeOf(primary);
+    }
+}
+
+/// "Devstral-…-00001-of-00002.gguf" yields "Devstral-…-", the prefix every shard of that set shares.
+String shardPrefix(String fileName) {
+    var infix = fileName.lastIndexOf("-of-");
+    if (infix < 0) {
+        return null;
+    }
+    var shardStart = fileName.lastIndexOf('-', infix - 1);
+    return shardStart < 0 ? null : fileName.substring(0, shardStart + 1);
+}
+
+long sizeOf(Path file) {
+    try {
+        return Files.size(file);
+    } catch (IOException problem) {
+        return 0;
+    }
+}
+
+record LocalModel(String fileName, long bytes) {
+
+    String stem() {
+        return this.fileName.substring(0, this.fileName.length() - ModelCatalog.EXTENSION.length());
+    }
+
+    /// Locale.ROOT: a results file with a comma as the decimal separator is not a markdown table cell
+    String gigabytes() {
+        return String.format(Locale.ROOT, "%.1f", this.bytes / 1_000_000_000d);
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// benchmarks
+// -------------------------------------------------------------------------------------------
+
+record Benchmark(String script, String label, int size) {}
+
+List<Benchmark> selectedBenchmarks(Args args) {
+    var all = List.of(
+            new Benchmark("agentLoopBenchmark", "loop", args.loop()),
+            new Benchmark("agentParallelismBenchmark", "parallelism", args.parallelism()),
+            new Benchmark("agentErrorRecoveryBenchmark", "recovery", args.recovery()));
+    if (args.benchmarks().isEmpty()) {
+        return all;
+    }
+    var selected = all.stream().filter(b -> args.benchmarks().contains(b.label())).toList();
+    if (selected.isEmpty()) {
+        Log.stop("unknown benchmark in -benchmarks — expected loop, parallelism or recovery");
+    }
+    return selected;
+}
+
+void requireBenchmarksDirectory(List<Benchmark> benchmarks) {
+    var missing = benchmarks.stream()
+            .map(Benchmark::script)
+            .filter(script -> !Files.isReadable(Path.of(script)))
+            .toList();
+    if (!missing.isEmpty()) {
+        Log.stop("not found in the current directory: " + String.join(", ", missing)
+                + " — run " + name + " from the benchmarks/ directory");
+    }
+}
+
+/// zsmith prefers lightmetal only while its jar is on the classpath; otherwise it falls back to
+/// `llm.provider`, which is a hosted provider in ~/.zsmith/app.properties. Without this guard a
+/// benchmark shebang edited to drop lightmetal.jar would quietly score a remote model — and every
+/// row in the table would look perfectly plausible.
+void requireLightMetal(List<Benchmark> benchmarks) throws IOException {
+    for (var benchmark : benchmarks) {
+        var onClassPath = shebangFlags(benchmark.script()).stream()
+                .anyMatch(flag -> flag.contains("lightmetal.jar"));
+        if (!onClassPath) {
+            Log.stop(benchmark.script() + ": lightmetal.jar is missing from its shebang class path"
+                    + " — the sweep would score the configured hosted provider instead");
+        }
+    }
+}
+
+// -------------------------------------------------------------------------------------------
+// results
+// -------------------------------------------------------------------------------------------
+
+/// The benchmarks' own Model column reports the *served* name, read back from the GGUF metadata, so
+/// it cannot tell a Q4 apart from a Q8 of the same model. The requested file name leads the table.
+String HEADER = """
+        | Model file | Served | Benchmark | Size | Calls | Turns | Result | Duration |
+        |------------|--------|-----------|------|-------|-------|--------|----------|""";
+
+record Outcome(String served, String calls, String turns, String result, String took) {
+
+    static Outcome of(String result, String took) {
+        return new Outcome("–", "–", "–", result, took);
+    }
+}
+
+Outcome parseRow(String row, String took) {
+    var cells = Stream.of(row.split("\\|", -1)).map(String::trim).toList();
+    if (cells.size() < 7) {
+        return Outcome.of("CRASH", took);
+    }
+    // | benchmark | model | size | calls | turns | result |
+    return new Outcome(cells.get(2), cells.get(4), cells.get(5), cells.get(6), took);
+}
+
+String resultsRow(LocalModel model, Benchmark benchmark, Outcome outcome) {
+    return "| %s | %s | %s | %d | %s | %s | %s | %s |".formatted(
+            model.fileName(), outcome.served(), benchmark.label(), benchmark.size(),
+            outcome.calls(), outcome.turns(), outcome.result(), outcome.took());
+}
+
+void startResults(Path results, Args args, List<LocalModel> models, List<Benchmark> benchmarks)
+        throws IOException {
+    if (Files.exists(results)) {
+        return;
+    }
+    var preamble = """
+            # Local model sweep — %s
+
+            %d models × %d benchmarks × %d run(s) · sizes: loop=%d parallelism=%d recovery=%d \
+            · timeout: %d min
+
+            %s
+            """.formatted(timestamp(), models.size(), benchmarks.size(), args.repeat(),
+            args.loop(), args.parallelism(), args.recovery(), args.timeoutMinutes(), HEADER);
+    Files.createDirectories(results.toAbsolutePath().getParent());
+    Files.writeString(results, preamble, StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+}
+
+/// Resuming skips a model/benchmark pair that already produced any row — including a FAIL, a CRASH
+/// or a TIMEOUT. Delete those rows to retry them.
+Set<String> completed(Path results) throws IOException {
+    if (!Files.exists(results)) {
+        return Set.of();
+    }
+    return Files.readAllLines(results).stream()
+            .filter(line -> line.startsWith("| "))
+            .map(line -> Stream.of(line.split("\\|", -1)).map(String::trim).toList())
+            .filter(cells -> cells.size() >= 7)
+            .map(cells -> key(cells.get(1), cells.get(3)))
+            .collect(Collectors.toSet());
+}
+
+String key(String fileName, String benchmark) {
+    return fileName + " " + benchmark;
+}
+
+Path logDirectory(Path results) {
+    var fileName = results.getFileName().toString();
+    var stem = fileName.endsWith(".md")
+            ? fileName.substring(0, fileName.length() - ".md".length())
+            : fileName;
+    var parent = results.toAbsolutePath().getParent();
+    return parent.resolve(stem);
+}
+
+void printPlan(Args args, List<LocalModel> models, List<Benchmark> benchmarks) throws IOException {
+    var runs = models.size() * benchmarks.size() * args.repeat();
+    IO.println("""
+
+            %d models × %d benchmarks × %d run(s) = %d runs, %d min timeout each
+            results: %s
+
+            models, in sweep order:""".formatted(models.size(), benchmarks.size(), args.repeat(),
+            runs, args.timeoutMinutes(), args.out()));
+    models.forEach(model -> IO.println("  %6s GB  %s".formatted(model.gigabytes(), model.fileName())));
+    IO.println("""
+
+            benchmarks: %s
+
+            first run:
+              %s"""
+            .formatted(
+                    benchmarks.stream()
+                            .map(b -> "%s(%d)".formatted(b.label(), b.size()))
+                            .collect(Collectors.joining(", ")),
+                    String.join(" ", command(args, models.getFirst(), benchmarks.getFirst()))));
+}
+
+// -------------------------------------------------------------------------------------------
+// arguments
+// -------------------------------------------------------------------------------------------
+
+enum Arg {
+
+    HELP("-help", false, "show this help"),
+    VERSION("-version", false, "print the version"),
+    MODELS("-models", true, "comma separated name fragments (default: every local model)"),
+    BENCHMARKS("-benchmarks", true, "comma separated: loop, parallelism, recovery (default: all)"),
+    LOOP("-loop", true, "pointer chasing depth (default: 25)"),
+    PARALLELISM("-parallelism", true, "independent lookups (default: 8)"),
+    RECOVERY("-recovery", true, "injected faults (default: 2)"),
+    TIMEOUT("-timeout", true, "minutes before a run is killed (default: 45)"),
+    CONTEXT("-context", true, "context.length for each run (default: lightmetal's own config)"),
+    REPEAT("-repeat", true, "runs per model and benchmark (default: 1)"),
+    MAX_GB("-max-gb", true, "skip models larger than n GB (default: no limit)"),
+    OUT("-out", true, "results file (default: results/<timestamp>.md)"),
+    RESUME("-resume", false, "skip model/benchmark pairs already present in the results file"),
+    DRY_RUN("-dry-run", false, "print the sweep plan and the first child command, then exit");
+
+    final String option;
+    /// drives how many tokens the option consumes — a flag must never swallow the argument after it
+    final boolean takesValue;
+    final String description;
+
+    Arg(String option, boolean takesValue, String description) {
+        this.option = option;
+        this.takesValue = takesValue;
+        this.description = description;
+    }
+
+    boolean matches(String value) {
+        return this.option.equals(value) || value.startsWith(this.option + ":");
+    }
+
+    static Arg from(String value) {
+        return Stream.of(values())
+                .filter(arg -> arg.matches(value))
+                .findFirst()
+                .orElse(null);
+    }
+
+    static String usage() {
+        return Stream.of(values())
+                .map(arg -> "  %-14s %s".formatted(arg.option, arg.description))
+                .collect(Collectors.joining("\n"));
+    }
+}
+
+record Args(List<String> modelFragments, List<String> benchmarks, int loop, int parallelism,
+        int recovery, int timeoutMinutes, int contextLength, int repeat, long maxBytes, String out,
+        boolean resume, boolean dryRun) {}
+
+/// Returns null when the run was only a -help or -version request.
+Args parseArgs(String[] args) {
+    var modelFragments = List.<String>of();
+    var benchmarks = List.<String>of();
+    var loop = 25;
+    var parallelism = 8;
+    var recovery = 2;
+    var timeoutMinutes = 45;
+    var contextLength = 0;
+    var repeat = 1;
+    var maxBytes = 0L;
+    var out = "results/%s.md".formatted(timestamp());
+    var resume = false;
+    var dryRun = false;
+
+    for (var i = 0; i < args.length; i++) {
+        var arg = args[i];
+        var option = Arg.from(arg);
+        if (option == null) {
+            Log.stop("unknown option: " + arg + "\n" + Arg.usage());
+        }
+        // the separate form consumes the following token, the -option:value form does not
+        var value = "";
+        if (option.takesValue) {
+            var separator = arg.indexOf(':');
+            if (separator >= 0) {
+                value = arg.substring(separator + 1);
+            } else if (i + 1 < args.length) {
+                value = args[++i];
+            } else {
+                Log.stop("missing value for " + arg);
+            }
+        }
+        switch (option) {
+            case HELP -> {
+                printUsage();
+                return null;
+            }
+            case VERSION -> {
+                return null;
+            }
+            case MODELS -> modelFragments = split(value);
+            case BENCHMARKS -> benchmarks = split(value);
+            case LOOP -> loop = number(value);
+            case PARALLELISM -> parallelism = number(value);
+            case RECOVERY -> recovery = number(value);
+            case TIMEOUT -> timeoutMinutes = number(value);
+            case CONTEXT -> contextLength = number(value);
+            case REPEAT -> repeat = number(value);
+            case MAX_GB -> maxBytes = number(value) * 1_000_000_000L;
+            case OUT -> out = value;
+            case RESUME -> resume = true;
+            case DRY_RUN -> dryRun = true;
+        }
+    }
+    return new Args(modelFragments, benchmarks, loop, parallelism, recovery, timeoutMinutes,
+            contextLength, repeat, maxBytes, out, resume, dryRun);
+}
+
+int number(String value) {
+    try {
+        return Integer.parseInt(value.trim());
+    } catch (NumberFormatException problem) {
+        Log.stop("not a number: " + value);
+        return 0;
+    }
+}
+
+List<String> split(String value) {
+    return Stream.of(value.split(","))
+            .map(String::trim)
+            .filter(entry -> !entry.isEmpty())
+            .toList();
+}
+
+void printUsage() {
+    IO.println("""
+
+            Runs the agent benchmarks against every local model, one child JVM per run.
+            Run it from the benchmarks/ directory.
+
+            Usage: %s [options]
+
+            %s
+
+            Values accept both -loop:25 and -loop 25.
+
+            Examples:
+              %s -dry-run
+              %s -models:gemma,devstral -loop:10
+              %s -out:results/sweep.md -resume
+            """.formatted(name, Arg.usage(), name, name, name));
+}
+
+// -------------------------------------------------------------------------------------------
+// output
+// -------------------------------------------------------------------------------------------
+
+String timestamp() {
+    return DateTimeFormatter.ofPattern("yyyy-MM-dd-HHmmss").format(LocalDateTime.now());
+}
+
+String elapsed(long startedNanos) {
+    var seconds = Duration.ofNanos(System.nanoTime() - startedNanos).toSeconds();
+    return "%d:%02d".formatted(seconds / 60, seconds % 60);
+}
+
+enum Log {
+
+    NOTE("\033[38;2;131;148;150m"),
+    ERROR("\033[38;2;220;50;47m");
+
+    static final String RESET = "\033[0m";
+
+    final String color;
+
+    Log(String color) {
+        this.color = color;
+    }
+
+    void err(String message) {
+        System.err.println(this.color + message + RESET);
+    }
+
+    static void note(String message) {
+        NOTE.err(message);
+    }
+
+    static void stop(String message) {
+        ERROR.err(message);
+        System.exit(1);
+    }
+}
