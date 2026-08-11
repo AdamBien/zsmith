@@ -8,6 +8,8 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
 import airhacks.zsmith.tools.control.ListFilesEndingTool;
 
+/// Traces tools spec R2.1, R6.2, R6.3, R6.4 — see src/main/java/airhacks/zsmith/tools/package-info.java
+
 void main() throws IOException {
     var tempDir = Files.createTempDirectory("zunit-listfilesending");
     try {
@@ -18,17 +20,21 @@ void main() throws IOException {
 
         var tool = ListFilesEndingTool.create(new SandboxedFileSystem(tempDir));
 
-        assert "list_files_ending".equals(tool.toolName()) : "expected 'list_files_ending' but got: " + tool.toolName();
+        // R2.1 — The BC shall publish each handler's name, description and input schema.
+        assert "list_files_ending".equals(tool.toolName()) : "R2.1 — expected 'list_files_ending' but got: " + tool.toolName();
         var schema = tool.inputSchema().toString();
-        assert schema.contains("\"ending\"") : "inputSchema should contain '\"ending\"'";
-        assert schema.contains("\"required\"") : "inputSchema should contain '\"required\"'";
+        assert schema.contains("\"ending\"") : "R2.1 — inputSchema should contain '\"ending\"'";
+        assert schema.contains("\"required\"") : "R2.1 — inputSchema should contain '\"required\"'";
 
+        // R6.2 — Where a name suffix is supplied, the BC shall return only the files whose name carries it.
+        // R6.3 — The BC shall return the paths in a stable order.
         var javaFiles = tool.execute(new JSONObject().put("ending", ".java"));
-        assert "A.java\nsub/B.java".equals(javaFiles) : "expected sorted Java files but got: " + javaFiles;
-        assert !javaFiles.contains("readme.md") : "listing should not contain readme.md: " + javaFiles;
+        assert "A.java\nsub/B.java".equals(javaFiles) : "R6.3 — expected sorted Java files but got: " + javaFiles;
+        assert !javaFiles.contains("readme.md") : "R6.2 — listing should not contain readme.md: " + javaFiles;
 
+        // R6.4 — If no file matches, then the BC shall report that none was found.
         var noMatch = tool.execute(new JSONObject().put("ending", ".kt"));
-        assert "No files ending with .kt found".equals(noMatch) : "expected no-match message but got: " + noMatch;
+        assert "No files ending with .kt found".equals(noMatch) : "R6.4 — expected no-match message but got: " + noMatch;
 
         var missingEnding = tool.execute(new JSONObject());
         assert "Error: Missing required parameter: ending".equals(missingEnding)

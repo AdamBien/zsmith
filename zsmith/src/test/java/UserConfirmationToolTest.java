@@ -2,6 +2,9 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.UserConfirmationTool;
 
+/// Traces tools spec R15.3 — see src/main/java/airhacks/zsmith/tools/package-info.java
+
+// R15.3 — When a yes/no question is supplied, the BC shall return the user's decision.
 void main() {
     // tool name is "user_confirmation"
     var tool = UserConfirmationTool.create(prompt -> "yes");

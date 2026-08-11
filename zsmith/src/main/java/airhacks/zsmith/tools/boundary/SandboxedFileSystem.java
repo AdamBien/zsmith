@@ -2,15 +2,24 @@ package airhacks.zsmith.tools.boundary;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
+import java.nio.file.attribute.BasicFileAttributes;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
+import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 import airhacks.zsmith.logging.control.Log;
+import airhacks.zsmith.tools.control.IgnoredDirectories;
+import airhacks.zsmith.tools.control.LineRange;
 
 public class SandboxedFileSystem {
 
@@ -54,7 +63,14 @@ public class SandboxedFileSystem {
     }
 
     public String readFile(String relativePath) {
-        Log.debug("Reading file: " + relativePath);
+        return readFile(relativePath, LineRange.wholeFile(), false);
+    }
+
+    /// Reads `relativePath`, restricted to `range` and optionally prefixed with
+    /// absolute line numbers. A sliced read is headed by the window it covers and
+    /// the file's total line count, so a reader can tell whether more remains.
+    public String readFile(String relativePath, LineRange range, boolean numbered) {
+        Log.debug("Reading file: " + relativePath + " " + range);
         Path resolved;
         try {
             resolved = resolve(relativePath);
@@ -63,9 +79,12 @@ public class SandboxedFileSystem {
             throw e;
         }
         try {
-            var content = Files.readString(resolved);
-            Log.debug("Read " + content.length() + " chars from " + relativePath);
-            return content;
+            if (range.coversWholeFile() && !numbered) {
+                var content = Files.readString(resolved);
+                Log.debug("Read " + content.length() + " chars from " + relativePath);
+                return content;
+            }
+            return selectLines(Files.readAllLines(resolved), range, numbered);
         } catch (java.nio.file.NoSuchFileException e) {
             Log.warning("File not found: " + relativePath);
             return "Error: File not found";
@@ -73,6 +92,24 @@ public class SandboxedFileSystem {
             Log.error("Could not read file: " + relativePath, e);
             return "Error: Could not read file";
         }
+    }
+
+    private String selectLines(List<String> lines, LineRange range, boolean numbered) {
+        var totalLines = lines.size();
+        if (range.startsBeyond(totalLines)) {
+            return "Error: offset %d is beyond the last line, the file has %d lines"
+                    .formatted(range.offset(), totalLines);
+        }
+        var lastLine = range.lastLine(totalLines);
+        var selected = IntStream.rangeClosed(range.offset(), lastLine)
+                .mapToObj(lineNumber -> numbered
+                        ? "%6d\t%s".formatted(lineNumber, lines.get(lineNumber - 1))
+                        : lines.get(lineNumber - 1))
+                .collect(Collectors.joining("\n"));
+        if (range.coversWholeFile()) {
+            return selected;
+        }
+        return "[lines %d-%d of %d]\n%s".formatted(range.offset(), lastLine, totalLines, selected);
     }
 
     public void writeFile(String relativePath, String content) {
@@ -109,39 +146,22 @@ public class SandboxedFileSystem {
     }
 
     public String listFiles() {
-        Log.debug("Listing files in sandbox");
-        try (var stream = Files.walk(this.rootDirectory)) {
-            var files = stream
-                    .filter(Files::isRegularFile)
-                    .map(this.rootDirectory::relativize)
-                    .map(Path::toString)
-                    .sorted()
-                    .toList();
-            if (files.isEmpty()) {
-                Log.debug("No files found in sandbox");
-                return "No files found in sandbox";
-            }
-            Log.debug("Found " + files.size() + " files");
-            return String.join("\n", files);
-        } catch (IOException e) {
-            Log.error("Could not list files", e);
-            return "Error: Could not list files";
-        }
+        return listFiles("");
     }
 
     public String listFiles(String ending) {
         Log.debug("Listing files ending with: " + ending);
-        try (var stream = Files.walk(this.rootDirectory)) {
-            var files = stream
-                    .filter(Files::isRegularFile)
+        try {
+            var files = traversableFiles().stream()
                     .filter(file -> fileNameEndsWith(file, ending))
                     .map(this.rootDirectory::relativize)
                     .map(Path::toString)
-                    .sorted()
                     .toList();
             if (files.isEmpty()) {
                 Log.debug("No files ending with " + ending + " found");
-                return "No files ending with " + ending + " found";
+                return ending.isEmpty()
+                        ? "No files found in sandbox"
+                        : "No files ending with " + ending + " found";
             }
             Log.debug("Found " + files.size() + " files ending with " + ending);
             return String.join("\n", files);
@@ -149,6 +169,40 @@ public class SandboxedFileSystem {
             Log.error("Could not list files", e);
             return "Error: Could not list files";
         }
+    }
+
+    /// Every regular file below the root, in stable order, with the
+    /// [IgnoredDirectories] subtrees pruned rather than walked and discarded.
+    private List<Path> traversableFiles() throws IOException {
+        var ignored = IgnoredDirectories.resolve();
+        var files = new ArrayList<Path>();
+        Files.walkFileTree(this.rootDirectory, new SimpleFileVisitor<Path>() {
+
+            @Override
+            public FileVisitResult preVisitDirectory(Path directory, BasicFileAttributes attributes) {
+                var isRoot = directory.equals(SandboxedFileSystem.this.rootDirectory);
+                if (!isRoot && ignored.contains(directory.getFileName().toString())) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFile(Path file, BasicFileAttributes attributes) {
+                if (attributes.isRegularFile()) {
+                    files.add(file);
+                }
+                return FileVisitResult.CONTINUE;
+            }
+
+            @Override
+            public FileVisitResult visitFileFailed(Path file, IOException failure) {
+                Log.warning("Skipping unreadable path: " + file);
+                return FileVisitResult.CONTINUE;
+            }
+        });
+        files.sort(Comparator.naturalOrder());
+        return files;
     }
 
     public String searchFiles(String pattern, String ending) {
@@ -160,11 +214,9 @@ public class SandboxedFileSystem {
             Log.warning("Invalid search pattern: " + pattern);
             return "Error: invalid pattern: " + e.getMessage();
         }
-        try (var stream = Files.walk(this.rootDirectory)) {
-            var matches = stream
-                    .filter(Files::isRegularFile)
+        try {
+            var matches = traversableFiles().stream()
                     .filter(file -> fileNameEndsWith(file, ending))
-                    .sorted()
                     .flatMap(file -> matchingLines(file, compiled))
                     .limit(MAX_SEARCH_MATCHES + 1L)
                     .toList();

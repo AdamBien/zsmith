@@ -2,6 +2,10 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.LaunchAppTool;
 
+/// Traces tools spec R16.5 — see src/main/java/airhacks/zsmith/tools/package-info.java
+
+// R16.5 — Where a launch command is configured, the BC shall expose it as a named handler
+// taking arguments.
 void main() {
     var tool = LaunchAppTool.create("open_in_editor", "Opens a file in VS Code", "echo");
 

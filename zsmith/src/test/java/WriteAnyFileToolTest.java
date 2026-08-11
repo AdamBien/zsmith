@@ -7,6 +7,9 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.control.WriteAnyFileTool;
 
+/// Traces tools spec R9.2 — see src/main/java/airhacks/zsmith/tools/package-info.java
+
+// R9.2 — When content and an absolute path are supplied, the BC shall store the content there.
 void main() throws IOException {
     var tool = WriteAnyFileTool.create();
 

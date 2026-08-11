@@ -23,14 +23,17 @@ public interface CalculatorTool {
         var a = input.getDouble(Field.a.name());
         var b = input.getDouble(Field.b.name());
 
-        var result = switch (operation) {
-            case "add" -> a + b;
-            case "subtract" -> a - b;
-            case "multiply" -> a * b;
-            case "divide" -> a / b;
-            default -> throw new IllegalArgumentException("Unknown operation: " + operation);
+        // An LLM reading "Infinity" cannot tell it divided by zero, so the
+        // degenerate case is named rather than propagated as a float value.
+        if ("divide".equals(operation) && b == 0) {
+            return "Error: division by zero";
+        }
+        return switch (operation) {
+            case "add" -> String.valueOf(a + b);
+            case "subtract" -> String.valueOf(a - b);
+            case "multiply" -> String.valueOf(a * b);
+            case "divide" -> String.valueOf(a / b);
+            default -> "Error: unsupported operation: " + operation;
         };
-
-        return String.valueOf(result);
     }
 }

@@ -43,6 +43,10 @@ public interface ToolHandler {
             return new Prop<>(name, "integer", description, List.of(), true);
         }
 
+        public static <E extends Enum<E>> Prop<E> bool(E name, String description) {
+            return new Prop<>(name, "boolean", description, List.of(), true);
+        }
+
         public Prop<E> optional() {
             return new Prop<>(name, type, description, enumValues, false);
         }
