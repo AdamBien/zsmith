@@ -257,8 +257,8 @@ public interface Claude {
     static JSONObject claudeMessage(JSONArray messages, float temperature, String system) {
         var payload = new JSONObject()
                 .put("max_tokens", currentModel.maxTokens())
-                .put("messages", messages)
-                .put("system", system);
+                .put("messages", CacheControl.messages(messages))
+                .put("system", CacheControl.system(system));
         if (currentModel.supports(Capability.TEMPERATURE)) {
             payload.put("temperature", temperature);
         }

@@ -116,7 +116,7 @@ JSONObject requestWithLastMessage(String content) {
             .filter(request -> {
                 var messages = request.getJSONArray("messages");
                 var last = messages.getJSONObject(messages.length() - 1);
-                return content.equals(last.optString("content"));
+                return content.equals(text(last.opt("content")));
             })
             .findFirst()
             .orElseThrow(() -> new AssertionError("R5.1 — no LLM request ends with message: " + content));
@@ -126,7 +126,23 @@ String messageContents(JSONObject request) {
     var messages = request.getJSONArray("messages");
     var all = new StringBuilder();
     for (int i = 0; i < messages.length(); i++) {
-        all.append(messages.getJSONObject(i).optString("content")).append('\n');
+        all.append(text(messages.getJSONObject(i).opt("content"))).append('\n');
     }
     return all.toString();
+}
+
+/// The wire carries message content either as a plain string or as an array of typed
+/// text blocks (prompt caching normalizes to block form); both flatten to their text.
+static String text(Object value) {
+    if (value instanceof String plain)
+        return plain;
+    if (!(value instanceof JSONArray blocks))
+        return "";
+    var text = new StringBuilder();
+    for (int i = 0; i < blocks.length(); i++) {
+        var block = blocks.optJSONObject(i);
+        if (block != null && "text".equals(block.optString("type")))
+            text.append(block.optString("text"));
+    }
+    return text.toString();
 }

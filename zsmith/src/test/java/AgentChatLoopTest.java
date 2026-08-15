@@ -95,11 +95,11 @@ void userMessageReachesLLMWithToolDefinitions() {
     agent.chat("hello R2.1");
 
     var request = this.requests.getFirst();
-    if (!request.getString("system").contains("system prompt marker R2.1"))
-        throw new AssertionError("R2.1 — expected system prompt in LLM request but got: " + request.optString("system"));
+    if (!text(request.opt("system")).contains("system prompt marker R2.1"))
+        throw new AssertionError("R2.1 — expected system prompt in LLM request but got: " + request.opt("system"));
     var messages = request.getJSONArray("messages");
     var last = messages.getJSONObject(messages.length() - 1);
-    if (!"hello R2.1".equals(last.getString("content")))
+    if (!"hello R2.1".equals(text(last.opt("content"))))
         throw new AssertionError("R2.1 — expected user message in LLM request but got: " + last);
     var recorded = agent.memory().toJSON().getJSONObject(0);
     if (!"user".equals(recorded.getString("role")) || !"hello R2.1".equals(recorded.getString("content")))
@@ -193,6 +193,22 @@ void actSendsGoTrigger() {
     var agent = new Agent("chatloop-r27", "prompt");
     agent.act();
     var messages = this.requests.getFirst().getJSONArray("messages");
-    if (!"go".equals(messages.getJSONObject(0).getString("content")))
+    if (!"go".equals(text(messages.getJSONObject(0).opt("content"))))
         throw new AssertionError("R2.7 — expected 'go' trigger message but got: " + messages.getJSONObject(0));
+}
+
+/// The wire carries prompts either as plain strings or as arrays of typed text blocks
+/// (prompt caching normalizes to block form); both flatten to their text.
+static String text(Object value) {
+    if (value instanceof String plain)
+        return plain;
+    if (!(value instanceof JSONArray blocks))
+        return "";
+    var text = new StringBuilder();
+    for (int i = 0; i < blocks.length(); i++) {
+        var block = blocks.optJSONObject(i);
+        if (block != null && "text".equals(block.optString("type")))
+            text.append(block.optString("text"));
+    }
+    return text.toString();
 }

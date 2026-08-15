@@ -2,6 +2,7 @@ package airhacks.zsmith.agent.boundary;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -257,9 +258,13 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 this.maxIterations, this.temperature, this.episodicMemory);
     }
 
+    /// Sorted by name so equal tool sets serialize byte-identically: the definitions render
+    /// at the very front of the cached prompt prefix, where a `HashMap`'s incidental order
+    /// would otherwise decide whether parallel sessions of the same agent share a cache entry.
     JSONArray toolDefinitions() {
         var array = new JSONArray();
         this.tools.values().stream()
+                .sorted(Comparator.comparing(ToolHandler::toolName))
                 .map(ToolHandler::toToolDefinition)
                 .forEach(array::put);
         return array;
