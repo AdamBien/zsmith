@@ -22,7 +22,7 @@ void main() throws IOException {
         // R1.3 — When a sandbox root is supplied without a selection, the BC shall bind every
         // sandboxed file handler to that root.
         var full = new Agent("full", "You test sandboxes.").withSandbox(tempDir);
-        var allSandboxed = Set.of("read_file", "write_file", "list_files", "list_files_ending", "search_files");
+        var allSandboxed = Set.of("read_file", "write_file", "edit_file", "list_files", "list_files_ending", "search_files");
         assert full.tools().keySet().equals(allSandboxed)
                 : "R1.3 — no selection should grant all sandboxed tools but got: " + full.tools().keySet();
 

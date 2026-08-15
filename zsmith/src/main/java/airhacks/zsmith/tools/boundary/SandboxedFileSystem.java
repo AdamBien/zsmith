@@ -145,6 +145,68 @@ public class SandboxedFileSystem {
         }
     }
 
+    /// Replaces `target` with `replacement` in the file at `relativePath`.
+    /// Matching is exact and verbatim — no whitespace normalization — and the
+    /// target must occur exactly once unless `replaceAll` widens the edit to
+    /// every occurrence. Everything outside the match is preserved as-is.
+    public String editFile(String relativePath, String target, String replacement, boolean replaceAll) {
+        Log.debug("Editing file: " + relativePath);
+        Path resolved;
+        try {
+            resolved = resolve(relativePath);
+        } catch (IllegalArgumentException e) {
+            Log.error("Invalid path: " + relativePath);
+            throw e;
+        }
+        if (target.isEmpty()) {
+            return "Error: old_string must not be empty, use write_file to create content";
+        }
+        if (target.equals(replacement)) {
+            return "Error: old_string and new_string are identical, nothing to change";
+        }
+        String content;
+        try {
+            content = Files.readString(resolved);
+        } catch (java.nio.file.NoSuchFileException e) {
+            Log.warning("File not found: " + relativePath);
+            return "Error: File not found";
+        } catch (IOException e) {
+            Log.error("Could not read file: " + relativePath, e);
+            return "Error: Could not read file";
+        }
+        var occurrences = countOccurrences(content, target);
+        if (occurrences == 0) {
+            Log.warning("old_string not found in: " + relativePath);
+            return "Error: old_string not found in " + relativePath
+                    + ", matching is exact including whitespace, re-read the file and retry";
+        }
+        if (occurrences > 1 && !replaceAll) {
+            Log.warning("old_string ambiguous in " + relativePath + ": " + occurrences + " occurrences");
+            return "Error: old_string occurs " + occurrences + " times in " + relativePath
+                    + ", add surrounding context to make it unique or pass replace_all=\"true\"";
+        }
+        try {
+            Files.writeString(resolved, content.replace(target, replacement));
+        } catch (IOException e) {
+            Log.error("Could not write file: " + relativePath, e);
+            return "Error: Could not write file";
+        }
+        Log.debug("Replaced " + occurrences + " occurrence(s) in " + relativePath);
+        return replaceAll
+                ? "Replaced " + occurrences + " occurrence" + (occurrences == 1 ? "" : "s") + " in: " + relativePath
+                : "Edited file: " + relativePath;
+    }
+
+    private int countOccurrences(String content, String target) {
+        var count = 0;
+        var index = content.indexOf(target);
+        while (index >= 0) {
+            count++;
+            index = content.indexOf(target, index + target.length());
+        }
+        return count;
+    }
+
     public String listFiles() {
         return listFiles("");
     }

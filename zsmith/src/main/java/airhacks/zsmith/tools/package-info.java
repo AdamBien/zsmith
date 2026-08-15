@@ -13,6 +13,7 @@
 /// <!-- file access, confined to a sandbox root -->
 /// - `read-file` — return a sandboxed file's contents, optionally a numbered line range
 /// - `write-file` — store content at a sandboxed path
+/// - `edit-file` — replace an exact text occurrence in a sandboxed file
 /// - `list-files` — enumerate the sandboxed files
 /// - `list-files-ending` — enumerate the sandboxed files whose name carries a suffix
 /// - `search-files` — return the sandboxed lines matching a regular expression
@@ -137,6 +138,14 @@
 /// - R16.4 — If a process outlives its timeout, then the BC shall terminate it and report the timeout. _(why: an unbounded child process hangs the agent loop with no diagnostic)_
 /// - R16.5 — Where a launch command is configured, the BC shall expose it as a named handler taking arguments.
 ///
+/// ### R17: Edit a sandboxed file
+/// - R17.1 — When a target text, its replacement and a sandboxed path are supplied and the target occurs exactly once in the file, the BC shall replace that occurrence and leave the rest of the file unchanged. _(why: a full rewrite regenerates untouched content, where silent corruption happens; an anchored edit cannot)_
+/// - R17.2 — Where replacing every occurrence is requested, the BC shall replace all occurrences and report their count.
+/// - R17.3 — If the target text is absent from the file, then the BC shall reject the edit and report that the target was not found.
+/// - R17.4 — If the target text occurs more than once and replacing every occurrence is not requested, then the BC shall reject the edit and report the occurrence count. _(why: an ambiguous target could land the edit on the wrong occurrence silently; the count tells the caller how much anchoring context to add)_
+/// - R17.5 — If the target text is empty or equals its replacement, then the BC shall reject the edit. _(why: an empty target is a write in disguise; an identical replacement signals a confused caller)_
+/// - R17.6 — If the requested file is absent, then the BC shall report that it was not found.
+///
 /// ## Entities
 /// - Tool, ToolUse, ToolResult, ToolPermission
 ///
@@ -144,9 +153,11 @@
 /// - D1 — Line numbering on `read-file` is opt-in, defaulting to off. _(why: `javaConventionsReviewer` and every other existing prompt parse raw source; rejected: numbering always, which changes output for all current agents, and numbering only when sliced, which leaves whole-file findings uncitable)_
 /// - D2 — Traversal exclusion ships as a built-in directory set overridable through configuration. _(why: correct with zero setup and escapable when wrong; rejected: honouring `.gitignore`, whose glob semantics are a parser this project will not carry, and a per-call exclude parameter, which leaves the common case wasteful whenever the model omits it)_
 /// - D3 — Review scope stays whole-tree; the BC offers no diff-aware traversal. _(why: keeps the file handlers free of version-control coupling; rejected: a diff tool scoping review to changed files)_
+/// - D4 — Edit matching is exact and verbatim. _(why: a fuzzy match that lands wrong edits silently, while an exact miss is loud and costs one retry with a fresh read; rejected: whitespace-tolerant matching)_
 ///
 /// ## Out of scope
 /// <!-- weighed and deliberately excluded -->
+/// - Read-before-edit enforcement — would require per-session file state; the unique-match rule carries the safety
 /// - Enforcing a tool's permission, executing a requested tool, and turning a failure into an error result — declared and owned by the agent BC's R3
 /// - File metadata (size, line count) as a standalone operation — triage before reading
 /// - Paging beyond the search match limit
