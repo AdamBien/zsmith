@@ -7,6 +7,7 @@
 /// - `offer-sandbox-tools` — expose file handlers bound to a caller-supplied sandbox root
 /// - `offer-tool-profile` — expose a curated grouping of handlers for one capability
 /// - `register-record-tool` — adopt an annotated record as a handler
+/// - `publish-tool-contract` — publish the handler contract for tools implemented outside the framework
 /// - `describe-tools` — publish each handler's name, description and input schema
 /// - `resolve-tool-permission` — report the permission configured for a handler
 ///
@@ -51,6 +52,7 @@
 /// - R1.3 — When a sandbox root is supplied without a selection, the BC shall bind every sandboxed file handler to that root.
 /// - R1.4 — If a sandboxed tool set is requested, then the BC shall withhold every unconfined file handler from it. _(why: a caller asking for a sandbox is asking for confinement; silently including read-any-file would void it)_
 /// - R1.5 — The BC shall expose curated handler groupings for user interaction, clipboard and file access.
+/// - R1.6 — The BC shall publish the handler contract at its boundary so a tool implemented outside the framework is interchangeable with every built-in handler. _(why: the framework is published to Maven; without a boundary contract, plugin authors depend on a control-layer type)_
 ///
 /// ### R2: Publish what a caller needs to govern a tool
 /// <!-- this BC describes and classifies tools; enforcing the classification during a turn is the agent BC's R3 -->
