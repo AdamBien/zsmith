@@ -3,6 +3,7 @@ package airhacks.zsmith.tools.boundary;
 import java.util.function.Function;
 
 import airhacks.zsmith.tools.control.EditFileTool;
+import airhacks.zsmith.tools.control.FindFilesTool;
 import airhacks.zsmith.tools.control.ListFilesEndingTool;
 import airhacks.zsmith.tools.control.ListFilesTool;
 import airhacks.zsmith.tools.control.ReadFileTool;
@@ -22,6 +23,7 @@ public enum SandboxTools {
     EDIT_FILE(EditFileTool::create),
     LIST_FILES(ListFilesTool::create),
     LIST_FILES_ENDING(ListFilesEndingTool::create),
+    FIND_FILES(FindFilesTool::create),
     SEARCH_FILES(SearchFilesTool::create);
 
     final Function<SandboxedFileSystem, Tool> factory;

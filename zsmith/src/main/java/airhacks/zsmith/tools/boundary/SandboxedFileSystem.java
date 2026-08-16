@@ -2,9 +2,11 @@ package airhacks.zsmith.tools.boundary;
 
 import java.io.IOException;
 import java.io.UncheckedIOException;
+import java.nio.file.FileSystems;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.nio.file.PathMatcher;
 import java.nio.file.SimpleFileVisitor;
 import java.nio.file.StandardOpenOption;
 import java.nio.file.attribute.BasicFileAttributes;
@@ -230,6 +232,37 @@ public class SandboxedFileSystem {
         } catch (IOException e) {
             Log.error("Could not list files", e);
             return "Error: Could not list files";
+        }
+    }
+
+    /// Files whose name or root-relative path matches `globPattern`. A plain
+    /// name pattern (no separator) matches at any depth — "Dockerfile*" finds
+    /// src/main/docker/Dockerfile.jvm — while a pattern with separators is
+    /// matched against the relative path.
+    public String findFiles(String globPattern) {
+        Log.debug("Finding files matching: " + globPattern);
+        PathMatcher matcher;
+        try {
+            matcher = FileSystems.getDefault().getPathMatcher("glob:" + globPattern);
+        } catch (IllegalArgumentException | UnsupportedOperationException e) {
+            Log.warning("Invalid glob pattern: " + globPattern);
+            return "Error: invalid pattern: " + e.getMessage();
+        }
+        try {
+            var files = traversableFiles().stream()
+                    .map(this.rootDirectory::relativize)
+                    .filter(path -> matcher.matches(path) || matcher.matches(path.getFileName()))
+                    .map(Path::toString)
+                    .toList();
+            if (files.isEmpty()) {
+                Log.debug("No files matching " + globPattern + " found");
+                return "No files matching " + globPattern + " found";
+            }
+            Log.debug("Found " + files.size() + " files matching " + globPattern);
+            return String.join("\n", files);
+        } catch (IOException e) {
+            Log.error("Could not find files", e);
+            return "Error: Could not find files";
         }
     }
 

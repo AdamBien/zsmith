@@ -17,6 +17,7 @@
 /// - `edit-file` — replace an exact text occurrence in a sandboxed file
 /// - `list-files` — enumerate the sandboxed files
 /// - `list-files-ending` — enumerate the sandboxed files whose name carries a suffix
+/// - `find-files` — enumerate the sandboxed files whose name or relative path matches a glob
 /// - `search-files` — return the sandboxed lines matching a regular expression
 ///
 /// <!-- file access, unconfined -->
@@ -88,6 +89,8 @@
 /// - R6.2 — Where a name suffix is supplied, the BC shall return only the files whose name carries it.
 /// - R6.3 — The BC shall return the paths in a stable order. _(why: an unstable listing makes a reviewer's per-file fan-out unreproducible)_
 /// - R6.4 — If no file matches, then the BC shall report that none was found.
+/// - R6.5 — Where a glob pattern is supplied, the BC shall return only the files whose name or root-relative path matches it, with a name match applying at any depth. _(why: container and build files are named by prefix and infix — Dockerfile.jvm, Containerfile — which a suffix match cannot find)_
+/// - R6.6 — If the glob pattern is malformed, then the BC shall report it as invalid rather than fail.
 ///
 /// ### R7: Search sandboxed file contents
 /// - R7.1 — When a regular expression is supplied, the BC shall return each matching line with its root-relative path and line number.
