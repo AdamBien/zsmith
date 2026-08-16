@@ -5,25 +5,9 @@ import java.util.function.Function;
 
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
+import airhacks.zsmith.tools.boundary.Tool;
 
-public interface ToolHandler {
-
-    String toolName();
-
-    String description();
-
-    JSONObject inputSchema();
-
-    String execute(JSONObject input);
-
-    default boolean parallel() { return false; }
-
-    default JSONObject toToolDefinition() {
-        return new JSONObject()
-                .put("name", toolName())
-                .put("description", description())
-                .put("input_schema", inputSchema());
-    }
+public interface ToolHandler extends Tool {
 
     record Prop<E extends Enum<E>>(E name, String type, String description, List<String> enumValues, boolean required) {
 

@@ -45,7 +45,7 @@ import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
 import airhacks.zsmith.tools.boundary.ToolProfiles;
 import airhacks.zsmith.tools.control.Console;
 import airhacks.zsmith.tools.control.LaunchAppTool;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.tools.control.ToolPermission;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
 import airhacks.zsmith.tools.entity.ToolResult;
@@ -53,7 +53,7 @@ import airhacks.zsmith.tools.entity.ToolUse;
 import airhacks.zsmith.transcripts.boundary.TranscriptLog;
 import airhacks.zsmith.transcripts.entity.Transcript;
 
-public record Agent(String name, String systemPrompt, Memory memory, Map<String, ToolHandler> tools, int maxIterations,
+public record Agent(String name, String systemPrompt, Memory memory, Map<String, Tool> tools, int maxIterations,
         float temperature, EpisodicMemoryStore episodicMemory) {
 
     public Agent {
@@ -98,19 +98,19 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         this(null, null);
     }
 
-    public Agent withTool(ToolHandler tool) {
+    public Agent withTool(Tool tool) {
         this.tools.put(tool.toolName(), tool);
         return this;
     }
 
-    public Agent withTools(ToolHandler... tools) {
+    public Agent withTools(Tool... tools) {
         for (var tool : tools) {
             this.tools.put(tool.toolName(), tool);
         }
         return this;
     }
 
-    public Agent withTools(List<ToolHandler> tools) {
+    public Agent withTools(List<? extends Tool> tools) {
         tools.forEach(this::withTool);
         return this;
     }
@@ -264,8 +264,8 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     JSONArray toolDefinitions() {
         var array = new JSONArray();
         this.tools.values().stream()
-                .sorted(Comparator.comparing(ToolHandler::toolName))
-                .map(ToolHandler::toToolDefinition)
+                .sorted(Comparator.comparing(Tool::toolName))
+                .map(Tool::toToolDefinition)
                 .forEach(array::put);
         return array;
     }
@@ -288,7 +288,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             if (tool == null) {
                 Log.tool("tool not available: " + toolUse.name());
                 event.outcome = "not_available";
-                return ToolResult.error(toolUse.id(), "ToolHandler not available: " + toolUse.name());
+                return ToolResult.error(toolUse.id(), "Tool not available: " + toolUse.name());
             }
             var permission = ToolPermission.resolve(toolUse.name());
             if (permission == ToolPermission.DENY) {
