@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.function.Function;
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
+import airhacks.zsmith.tools.control.RecordTool;
+import airhacks.zsmith.tools.control.ToolRegistry;
 
 /// The published contract every tool fulfills — built-in and implemented
 /// outside the framework alike — together with the factories and schema
@@ -67,6 +69,10 @@ public interface Tool {
     static Tool of(String name, String description,
                    Function<JSONObject, String> execute) {
         return of(name, description, emptySchema(), execute, false);
+    }
+
+    static Tool of(Class<? extends RecordTool> recordTool) {
+        return new ToolRegistry().register(recordTool).tools().getFirst();
     }
 
     static Tool of(String name, String description, JSONObject inputSchema,

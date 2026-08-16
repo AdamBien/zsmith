@@ -3,10 +3,12 @@ package airhacks.zsmith.tools.control;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.RecordComponent;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.stream.Stream;
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
+import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.tools.entity.Describe;
 
 public class ToolRegistry {
@@ -65,6 +67,14 @@ public class ToolRegistry {
 
     public JSONArray toolDefinitions() {
         return new JSONArray(byName.values().stream().map(Entry::toJson).toList());
+    }
+
+    public List<Tool> tools() {
+        return byName.values().stream().map(this::toTool).toList();
+    }
+
+    Tool toTool(Entry entry) {
+        return Tool.of(entry.name(), entry.description(), entry.schema(), input -> invoke(entry.name(), input));
     }
 
     static Constructor<?> canonicalConstructor(Class<?> recordClass, RecordComponent[] components) {

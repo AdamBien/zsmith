@@ -53,6 +53,7 @@
 /// - R1.4 — If a sandboxed tool set is requested, then the BC shall withhold every unconfined file handler from it. _(why: a caller asking for a sandbox is asking for confinement; silently including read-any-file would void it)_
 /// - R1.5 — The BC shall expose curated handler groupings for user interaction, clipboard and file access.
 /// - R1.6 — The BC shall publish the handler contract at its boundary so a tool implemented outside the framework is interchangeable with every built-in handler. _(why: the framework is published to Maven; without a boundary contract, plugin authors depend on a control-layer type)_
+/// - R1.7 — When an annotated record is registered, the BC shall adopt it as a handler interchangeable with every built-in one. _(why: without this bridge the record mechanism describes tools an agent can never equip)_
 ///
 /// ### R2: Publish what a caller needs to govern a tool
 /// <!-- this BC describes and classifies tools; enforcing the classification during a turn is the agent BC's R3 -->
