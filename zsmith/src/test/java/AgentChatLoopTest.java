@@ -14,7 +14,7 @@ import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /// Traces agent spec R2.1–R2.7 and R4.1 against a stubbed LLM endpoint —
 /// see src/main/java/airhacks/zsmith/agent/package-info.java
@@ -91,7 +91,7 @@ void userMessageReachesLLMWithToolDefinitions() {
     this.requests.clear();
     this.script.add(new StubResponse(200, textTurn("ok")));
     var agent = new Agent("chatloop-r21", "system prompt marker R2.1")
-            .withTool(ToolHandler.of("echo_tool", "echoes input", input -> "echo"));
+            .withTool(Tool.of("echo_tool", "echoes input", input -> "echo"));
     agent.chat("hello R2.1");
 
     var request = this.requests.getFirst();
@@ -123,7 +123,7 @@ void toolLoopExecutesAndFeedsResults() {
     this.script.add(new StubResponse(200, textTurn("done R2.2")));
     var executed = new AtomicReference<String>();
     var agent = new Agent("chatloop-r22", "prompt")
-            .withTool(ToolHandler.of("echo_tool", "echoes input", input -> {
+            .withTool(Tool.of("echo_tool", "echoes input", input -> {
                 executed.set(input.optString("value"));
                 return "echoed:" + input.optString("value");
             }));
@@ -162,7 +162,7 @@ void answerTable() {
         this.requests.clear();
         this.script.addAll(c.responses());
         var agent = new Agent("chatloop-" + c.req(), "prompt")
-                .withTool(ToolHandler.of("looping_tool", "loops forever", input -> "again"))
+                .withTool(Tool.of("looping_tool", "loops forever", input -> "again"))
                 .withMaxIterations(c.maxIterations());
         var answer = agent.chat("question " + c.req());
         if (answer == null || !answer.contains(c.expectedFragment()))

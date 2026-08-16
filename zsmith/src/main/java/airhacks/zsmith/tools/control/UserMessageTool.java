@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.util.function.Consumer;
 
 import airhacks.zsmith.json.JSONObject;
@@ -10,15 +11,15 @@ public interface UserMessageTool {
 
     enum Field { message }
 
-    static ToolHandler create() {
+    static Tool create() {
         return create(Log::user);
     }
 
-    static ToolHandler create(Consumer<String> messageConsumer) {
-        return ToolHandler.of(
+    static Tool create(Consumer<String> messageConsumer) {
+        return Tool.of(
                 "user_message",
                 "Presents a message to the user. Use this to display important information, status updates, or notifications.",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.message, "The message to present to the user")),
+                Tool.schema(Tool.Prop.string(Field.message, "The message to present to the user")),
                 input -> run(input, messageConsumer));
     }
 

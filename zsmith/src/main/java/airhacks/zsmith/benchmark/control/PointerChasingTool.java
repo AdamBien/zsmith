@@ -5,14 +5,14 @@ import java.util.concurrent.atomic.AtomicInteger;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.benchmark.entity.Chain;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /**
  * Dedicated benchmark tool: resolves one hop per call and counts its own invocations.
  * Each call returns {@code fragment=<value> next=<key>}; the input of every call is the
  * output of the previous one, forcing strictly sequential pointer chasing.
  */
-public class PointerChasingTool implements ToolHandler {
+public class PointerChasingTool implements Tool {
 
     public enum Field { key }
 
@@ -43,7 +43,7 @@ public class PointerChasingTool implements ToolHandler {
 
     @Override
     public JSONObject inputSchema() {
-        return ToolHandler.schema(ToolHandler.Prop.string(Field.key, "The current key in the chain"));
+        return Tool.schema(Tool.Prop.string(Field.key, "The current key in the chain"));
     }
 
     @Override

@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -60,11 +61,11 @@ public interface FetchUrlTool {
 
     enum Field { url }
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "fetch_url",
                 "Fetches the content of a URL using a browser User-Agent and returns status, content type, and up to 20000 chars of the body. Use this to retrieve page or API content; use check_link only for lightweight reachability verification.",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.url, "The URL to fetch")),
+                Tool.schema(Tool.Prop.string(Field.url, "The URL to fetch")),
                 FetchUrlTool::run,
                 true);
     }

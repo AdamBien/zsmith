@@ -7,7 +7,6 @@ import airhacks.zsmith.tools.control.ListFilesEndingTool;
 import airhacks.zsmith.tools.control.ListFilesTool;
 import airhacks.zsmith.tools.control.ReadFileTool;
 import airhacks.zsmith.tools.control.SearchFilesTool;
-import airhacks.zsmith.tools.control.ToolHandler;
 import airhacks.zsmith.tools.control.WriteFileTool;
 
 /**
@@ -25,13 +24,13 @@ public enum SandboxTools {
     LIST_FILES_ENDING(ListFilesEndingTool::create),
     SEARCH_FILES(SearchFilesTool::create);
 
-    final Function<SandboxedFileSystem, ToolHandler> factory;
+    final Function<SandboxedFileSystem, Tool> factory;
 
-    SandboxTools(Function<SandboxedFileSystem, ToolHandler> factory) {
+    SandboxTools(Function<SandboxedFileSystem, Tool> factory) {
         this.factory = factory;
     }
 
-    public ToolHandler create(SandboxedFileSystem sandbox) {
+    public Tool create(SandboxedFileSystem sandbox) {
         return this.factory.apply(sandbox);
     }
 }

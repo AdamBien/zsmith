@@ -5,11 +5,10 @@ import java.util.stream.Stream;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.tools.control.ReadAnyFileTool;
-import airhacks.zsmith.tools.control.ToolHandler;
 import airhacks.zsmith.tools.control.WriteAnyFileTool;
 
 /**
- * Predefined groupings of {@link ToolHandler}s for common agent capabilities.
+ * Predefined groupings of {@link Tool}s for common agent capabilities.
  *
  * <p>Separates the concern of <em>which tools exist</em> ({@link Tools}) from
  * <em>which tools belong together for a given use case</em>. Agents compose
@@ -22,15 +21,15 @@ import airhacks.zsmith.tools.control.WriteAnyFileTool;
  */
 public interface ToolProfiles {
 
-    static List<ToolHandler> userIO() {
+    static List<Tool> userIO() {
         return List.of(Tools.USER_MESSAGE, Tools.USER_QUESTION, Tools.USER_CONFIRMATION);
     }
 
-    static List<ToolHandler> clipboard() {
+    static List<Tool> clipboard() {
         return List.of(Tools.READ_CLIPBOARD, Tools.WRITE_CLIPBOARD);
     }
 
-    static List<ToolHandler> fileIO(String agentName) {
+    static List<Tool> fileIO(String agentName) {
         var sandbox = new SandboxedFileSystem(ZCfg.sandboxPath(agentName));
         var sandboxed = Stream.of(SandboxTools.values())
                 .map(tool -> tool.create(sandbox));
@@ -38,7 +37,7 @@ public interface ToolProfiles {
                 .toList();
     }
 
-    static List<ToolHandler> all() {
+    static List<Tool> all() {
         return List.of(Tools.values());
     }
 }

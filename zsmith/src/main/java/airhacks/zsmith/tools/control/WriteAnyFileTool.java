@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -11,17 +12,17 @@ public interface WriteAnyFileTool {
 
     enum Field { path, content, append }
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "write_any_file",
                 "Writes content to a file at any absolute path on the filesystem. "
                         + "Overwrites the file by default; pass append=\"true\" to append. "
                         + "Creates missing parent directories. "
                         + "Use write_file for sandboxed writes; use this tool for paths outside the agent sandbox.",
-                ToolHandler.schema(
-                        ToolHandler.Prop.string(Field.path, "Absolute path to the file to write"),
-                        ToolHandler.Prop.string(Field.content, "Content to write to the file"),
-                        ToolHandler.Prop.stringEnum(Field.append, "Append to existing file instead of overwriting", "true", "false").optional()),
+                Tool.schema(
+                        Tool.Prop.string(Field.path, "Absolute path to the file to write"),
+                        Tool.Prop.string(Field.content, "Content to write to the file"),
+                        Tool.Prop.stringEnum(Field.append, "Append to existing file instead of overwriting", "true", "false").optional()),
                 WriteAnyFileTool::run);
     }
 

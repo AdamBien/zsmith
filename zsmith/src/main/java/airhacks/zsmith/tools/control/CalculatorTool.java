@@ -1,20 +1,21 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.json.JSONObject;
 
 public interface CalculatorTool {
 
     enum Field { operation, a, b }
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "calculator",
                 "Performs basic arithmetic operations: add, subtract, multiply, divide",
-                ToolHandler.schema(
-                        ToolHandler.Prop.stringEnum(Field.operation, "The arithmetic operation to perform",
+                Tool.schema(
+                        Tool.Prop.stringEnum(Field.operation, "The arithmetic operation to perform",
                                 "add", "subtract", "multiply", "divide"),
-                        ToolHandler.Prop.number(Field.a, "First operand"),
-                        ToolHandler.Prop.number(Field.b, "Second operand")),
+                        Tool.Prop.number(Field.a, "First operand"),
+                        Tool.Prop.number(Field.b, "Second operand")),
                 CalculatorTool::run);
     }
 

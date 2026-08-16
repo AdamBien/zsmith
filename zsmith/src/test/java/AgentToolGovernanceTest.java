@@ -15,7 +15,7 @@ import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /// Traces agent spec R3.1, R3.2, R3.4, R3.5 against a stubbed LLM endpoint —
 /// see src/main/java/airhacks/zsmith/agent/package-info.java
@@ -97,22 +97,22 @@ JSONObject firstToolResult(JSONObject followUpRequest) {
 // R3.4 — If a tool execution fails, then the BC shall convert the failure into an error result.
 void governanceTable() {
     var executed = new AtomicBoolean();
-    record Case(String req, String requestedTool, ToolHandler registered, String expectedFragment, boolean expectExecuted) {}
+    record Case(String req, String requestedTool, Tool registered, String expectedFragment, boolean expectExecuted) {}
     var cases = List.of(
             new Case("R3.1", "ghost_tool",
-                    ToolHandler.of("working_tool", "works", input -> {
+                    Tool.of("working_tool", "works", input -> {
                         executed.set(true);
                         return "worked";
                     }),
                     "not available", false),
             new Case("R3.2", "denied_tool",
-                    ToolHandler.of("denied_tool", "configured deny", input -> {
+                    Tool.of("denied_tool", "configured deny", input -> {
                         executed.set(true);
                         return "should never run";
                     }),
                     "Denied", false),
             new Case("R3.4", "explosive_tool",
-                    ToolHandler.of("explosive_tool", "throws", input -> {
+                    Tool.of("explosive_tool", "throws", input -> {
                         executed.set(true);
                         throw new RuntimeException("kaboom R3.4");
                     }),
@@ -145,15 +145,15 @@ void parallelAndSequentialExecution() {
     this.script.clear();
     this.requests.clear();
     var virtualByTool = new ConcurrentHashMap<String, Boolean>();
-    var parallelOne = ToolHandler.of("parallel_one", "parallel capable", ToolHandler.emptySchema(), input -> {
+    var parallelOne = Tool.of("parallel_one", "parallel capable", Tool.emptySchema(), input -> {
         virtualByTool.put("parallel_one", Thread.currentThread().isVirtual());
         return "p1";
     }, true);
-    var parallelTwo = ToolHandler.of("parallel_two", "parallel capable", ToolHandler.emptySchema(), input -> {
+    var parallelTwo = Tool.of("parallel_two", "parallel capable", Tool.emptySchema(), input -> {
         virtualByTool.put("parallel_two", Thread.currentThread().isVirtual());
         return "p2";
     }, true);
-    var sequentialOne = ToolHandler.of("sequential_one", "sequential", input -> {
+    var sequentialOne = Tool.of("sequential_one", "sequential", input -> {
         virtualByTool.put("sequential_one", Thread.currentThread().isVirtual());
         return "s1";
     });

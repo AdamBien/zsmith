@@ -6,6 +6,7 @@ import java.util.Comparator;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
+import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.tools.control.ReadAnyFileTool;
 import airhacks.zsmith.tools.control.WriteFileTool;
 
@@ -29,7 +30,7 @@ void main() throws IOException {
 
 // R5.1 — When content is stored at a sandboxed path, the BC shall create any missing parent
 // directories.
-void missingParentDirectoriesAreCreated(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void missingParentDirectoriesAreCreated(Tool tool, Path root) throws IOException {
     var result = tool.execute(new JSONObject().put("path", "deeply/nested/note.txt").put("content", "first"));
     if (result.startsWith("Error"))
         throw new AssertionError("R5.1 — expected the nested write to succeed but got: " + result);
@@ -38,7 +39,7 @@ void missingParentDirectoriesAreCreated(airhacks.zsmith.tools.control.ToolHandle
 }
 
 // R5.2 — Where appending is requested, the BC shall preserve the existing content and add to it.
-void appendingPreservesExistingContent(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void appendingPreservesExistingContent(Tool tool, Path root) throws IOException {
     tool.execute(new JSONObject().put("path", "log.txt").put("content", "one"));
     tool.execute(new JSONObject().put("path", "log.txt").put("content", "-two").put("append", "true"));
     var content = Files.readString(root.resolve("log.txt"));
@@ -47,7 +48,7 @@ void appendingPreservesExistingContent(airhacks.zsmith.tools.control.ToolHandler
 }
 
 // R5.3 — Where appending is not requested, the BC shall replace the existing content.
-void writingWithoutAppendReplaces(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void writingWithoutAppendReplaces(Tool tool, Path root) throws IOException {
     tool.execute(new JSONObject().put("path", "replaced.txt").put("content", "original"));
     tool.execute(new JSONObject().put("path", "replaced.txt").put("content", "fresh"));
     var content = Files.readString(root.resolve("replaced.txt"));

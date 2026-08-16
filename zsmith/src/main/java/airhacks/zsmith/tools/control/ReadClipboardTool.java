@@ -1,15 +1,16 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.awt.Toolkit;
 import java.awt.datatransfer.DataFlavor;
 
 public interface ReadClipboardTool {
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "read_clipboard",
                 "Reads the current text content from the system clipboard",
-                ToolHandler.emptySchema(),
+                Tool.emptySchema(),
                 input -> read());
     }
 

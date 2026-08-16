@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.awt.Toolkit;
 import java.awt.datatransfer.StringSelection;
 
@@ -9,11 +10,11 @@ public interface WriteClipboardTool {
 
     enum Field { text }
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "write_clipboard",
                 "Writes text content to the system clipboard",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.text, "The text to write to the clipboard")),
+                Tool.schema(Tool.Prop.string(Field.text, "The text to write to the clipboard")),
                 WriteClipboardTool::run);
     }
 

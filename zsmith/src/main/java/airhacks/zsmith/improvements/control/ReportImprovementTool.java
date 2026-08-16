@@ -5,9 +5,9 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.improvements.boundary.ImprovementLog;
 import airhacks.zsmith.improvements.entity.ArtifactKind;
 import airhacks.zsmith.improvements.entity.Improvement;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
-public class ReportImprovementTool implements ToolHandler {
+public class ReportImprovementTool implements Tool {
 
     private final ImprovementLog log;
 
@@ -42,7 +42,7 @@ public class ReportImprovementTool implements ToolHandler {
 
     @Override
     public JSONObject inputSchema() {
-        return ToolHandler.schema(
+        return Tool.schema(
                 Prop.stringEnum(Field.artifact, "Which instruction fell short: 'prompt' for your system prompt, 'skill' for a loaded skill, 'tool' for a tool description",
                         "prompt", "skill", "tool"),
                 Prop.string(Field.observation, "What the instruction failed to say, said ambiguously, or got wrong — not what you did about it"),

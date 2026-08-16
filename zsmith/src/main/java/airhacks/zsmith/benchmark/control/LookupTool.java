@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import airhacks.zsmith.json.JSONObject;
 
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /**
  * Independent-lookup tool for the parallel-discrimination benchmark. Resolves one {@code id} per
@@ -18,7 +18,7 @@ import airhacks.zsmith.tools.control.ToolHandler;
  * serializing one yields one turn per call and concurrency 1. The short sleep guarantees same-turn
  * calls overlap so the gauge is reliable; virtual threads make the wait free.
  */
-public class LookupTool implements ToolHandler {
+public class LookupTool implements Tool {
 
     public enum Field { id }
 
@@ -71,7 +71,7 @@ public class LookupTool implements ToolHandler {
 
     @Override
     public JSONObject inputSchema() {
-        return ToolHandler.schema(ToolHandler.Prop.string(Field.id, "The id to look up"));
+        return Tool.schema(Tool.Prop.string(Field.id, "The id to look up"));
     }
 
     @Override

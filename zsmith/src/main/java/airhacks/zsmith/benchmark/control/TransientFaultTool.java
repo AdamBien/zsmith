@@ -8,7 +8,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.benchmark.entity.Chain;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /**
  * Decorates {@link PointerChasingTool} with seeded transient faults: each faulty key fails
@@ -16,7 +16,7 @@ import airhacks.zsmith.tools.control.ToolHandler;
  * tool name, description, and schema are the delegate's, unchanged, so the benchmark measures
  * the agent's reaction to an error result, not obedience to an upfront warning.
  */
-public class TransientFaultTool implements ToolHandler {
+public class TransientFaultTool implements Tool {
 
     static final int FAILURES_PER_KEY = 1;
 

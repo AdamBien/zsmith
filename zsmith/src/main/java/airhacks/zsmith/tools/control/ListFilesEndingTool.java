@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.nio.file.Path;
 
 import airhacks.zsmith.json.JSONObject;
@@ -10,15 +11,15 @@ public interface ListFilesEndingTool {
 
     enum Field { ending }
 
-    static ToolHandler of(String sandboxPath) {
+    static Tool of(String sandboxPath) {
         return create(new SandboxedFileSystem(Path.of(sandboxPath)));
     }
 
-    static ToolHandler create(SandboxedFileSystem fs) {
-        return ToolHandler.of(
+    static Tool create(SandboxedFileSystem fs) {
+        return Tool.of(
                 "list_files_ending",
                 "Lists all files within the sandbox directory whose names end with the given suffix, one relative path per line",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.ending, "File name suffix to match, e.g. \".java\"")),
+                Tool.schema(Tool.Prop.string(Field.ending, "File name suffix to match, e.g. \".java\"")),
                 input -> run(input, fs));
     }
 

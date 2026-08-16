@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
@@ -18,19 +19,19 @@ public interface LaunchAppTool {
 
     enum Field { arguments }
 
-    static ToolHandler create(String name, String description, String command) {
+    static Tool create(String name, String description, String command) {
         return create(name, description, command, DEFAULT_TIMEOUT_SECONDS);
     }
 
-    static ToolHandler create(String name, String description, String command, int timeoutSeconds) {
-        return ToolHandler.of(
+    static Tool create(String name, String description, String command, int timeoutSeconds) {
+        return Tool.of(
                 name,
                 description,
-                ToolHandler.schema(ToolHandler.Prop.string(Field.arguments, "Arguments to pass to the application")),
+                Tool.schema(Tool.Prop.string(Field.arguments, "Arguments to pass to the application")),
                 input -> run(input, command, timeoutSeconds));
     }
 
-    static ToolHandler fromConfig() {
+    static Tool fromConfig() {
         return create(
                 ZCfg.requiredString("launch.tool.name"),
                 ZCfg.requiredString("launch.tool.description"),

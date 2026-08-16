@@ -4,7 +4,7 @@ import airhacks.zsmith.benchmark.control.Chains;
 import airhacks.zsmith.benchmark.control.PointerChasingTool;
 import airhacks.zsmith.benchmark.entity.BenchmarkResult;
 import airhacks.zsmith.benchmark.entity.Chain;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /**
  * Pointer-chasing benchmark for agents. A hidden chain of {@code depth} hops is generated;
@@ -38,7 +38,7 @@ public class PointerChasingBenchmark {
         this.tool = new PointerChasingTool(this.chain);
     }
 
-    public ToolHandler tool() {
+    public Tool tool() {
         return this.tool;
     }
 

@@ -5,9 +5,9 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.entity.Episode;
 import airhacks.zsmith.episodicmemory.entity.MemoryType;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
-public class StoreMemoryTool implements ToolHandler {
+public class StoreMemoryTool implements Tool {
 
     private final EpisodicMemoryStore store;
 
@@ -41,7 +41,7 @@ public class StoreMemoryTool implements ToolHandler {
 
     @Override
     public JSONObject inputSchema() {
-        return ToolHandler.schema(
+        return Tool.schema(
                 Prop.string(Field.content, "The fact to remember, stated so it makes sense on its own in a later session"),
                 Prop.stringEnum(Field.type, "The memory type: user, feedback, project, or reference",
                         "user", "feedback", "project", "reference")

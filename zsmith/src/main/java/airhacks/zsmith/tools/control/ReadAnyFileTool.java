@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -10,11 +11,11 @@ public interface ReadAnyFileTool {
 
     enum Field { path }
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "read_any_file",
                 "Reads a file from any location on the filesystem",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.path, "Absolute path to the file to read")),
+                Tool.schema(Tool.Prop.string(Field.path, "Absolute path to the file to read")),
                 ReadAnyFileTool::run);
     }
 

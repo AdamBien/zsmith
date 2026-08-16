@@ -6,6 +6,7 @@ import java.util.Comparator;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
+import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.tools.control.EditFileTool;
 
 /// Traces tools spec R17.1 - R17.6 — see src/main/java/airhacks/zsmith/tools/package-info.java
@@ -30,7 +31,7 @@ void main() throws IOException {
 // R17.1 — When a target text, its replacement and a sandboxed path are supplied and the target
 // occurs exactly once in the file, the BC shall replace that occurrence and leave the rest of
 // the file unchanged.
-void aUniqueOccurrenceIsReplaced(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void aUniqueOccurrenceIsReplaced(Tool tool, Path root) throws IOException {
     Files.writeString(root.resolve("unique.txt"), "alpha\nbravo\ncharlie\n");
     var result = tool.execute(new JSONObject()
             .put("path", "unique.txt")
@@ -45,7 +46,7 @@ void aUniqueOccurrenceIsReplaced(airhacks.zsmith.tools.control.ToolHandler tool,
 
 // R17.2 — Where replacing every occurrence is requested, the BC shall replace all occurrences
 // and report their count.
-void replaceAllReplacesEveryOccurrenceAndReportsTheCount(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void replaceAllReplacesEveryOccurrenceAndReportsTheCount(Tool tool, Path root) throws IOException {
     Files.writeString(root.resolve("all.txt"), "tick tock tick");
     var result = tool.execute(new JSONObject()
             .put("path", "all.txt")
@@ -61,7 +62,7 @@ void replaceAllReplacesEveryOccurrenceAndReportsTheCount(airhacks.zsmith.tools.c
 
 // R17.3 — If the target text is absent from the file, then the BC shall reject the edit and
 // report that the target was not found.
-void anAbsentTargetIsReported(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void anAbsentTargetIsReported(Tool tool, Path root) throws IOException {
     Files.writeString(root.resolve("absent.txt"), "alpha");
     var result = tool.execute(new JSONObject()
             .put("path", "absent.txt")
@@ -75,7 +76,7 @@ void anAbsentTargetIsReported(airhacks.zsmith.tools.control.ToolHandler tool, Pa
 
 // R17.4 — If the target text occurs more than once and replacing every occurrence is not
 // requested, then the BC shall reject the edit and report the occurrence count.
-void anAmbiguousTargetIsRejectedWithItsCount(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void anAmbiguousTargetIsRejectedWithItsCount(Tool tool, Path root) throws IOException {
     Files.writeString(root.resolve("ambiguous.txt"), "same\nsame\n");
     var result = tool.execute(new JSONObject()
             .put("path", "ambiguous.txt")
@@ -89,7 +90,7 @@ void anAmbiguousTargetIsRejectedWithItsCount(airhacks.zsmith.tools.control.ToolH
 
 // R17.5 — If the target text is empty or equals its replacement, then the BC shall reject
 // the edit.
-void anEmptyTargetIsRejected(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void anEmptyTargetIsRejected(Tool tool, Path root) throws IOException {
     Files.writeString(root.resolve("empty.txt"), "alpha");
     var result = tool.execute(new JSONObject()
             .put("path", "empty.txt")
@@ -101,7 +102,7 @@ void anEmptyTargetIsRejected(airhacks.zsmith.tools.control.ToolHandler tool, Pat
 
 // R17.5 — If the target text is empty or equals its replacement, then the BC shall reject
 // the edit.
-void anIdenticalReplacementIsRejected(airhacks.zsmith.tools.control.ToolHandler tool, Path root) throws IOException {
+void anIdenticalReplacementIsRejected(Tool tool, Path root) throws IOException {
     Files.writeString(root.resolve("identical.txt"), "alpha");
     var result = tool.execute(new JSONObject()
             .put("path", "identical.txt")
@@ -112,7 +113,7 @@ void anIdenticalReplacementIsRejected(airhacks.zsmith.tools.control.ToolHandler 
 }
 
 // R17.6 — If the requested file is absent, then the BC shall report that it was not found.
-void anAbsentFileIsReported(airhacks.zsmith.tools.control.ToolHandler tool) {
+void anAbsentFileIsReported(Tool tool) {
     var result = tool.execute(new JSONObject()
             .put("path", "missing.txt")
             .put("old_string", "alpha")

@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.nio.file.Path;
 
 import airhacks.zsmith.json.JSONObject;
@@ -10,12 +11,12 @@ public interface EditFileTool {
 
     enum Field { path, old_string, new_string, replace_all }
 
-    static ToolHandler of(String sandboxPath) {
+    static Tool of(String sandboxPath) {
         return create(new SandboxedFileSystem(Path.of(sandboxPath)));
     }
 
-    static ToolHandler create(SandboxedFileSystem fs) {
-        return ToolHandler.of(
+    static Tool create(SandboxedFileSystem fs) {
+        return Tool.of(
                 "edit_file",
                 "Replaces an exact occurrence of old_string with new_string in a file inside the agent's sandbox directory. "
                         + "Matching is exact and verbatim, including whitespace and line breaks. "
@@ -23,11 +24,11 @@ public interface EditFileTool {
                         + "Everything outside the match is preserved unchanged; an empty new_string deletes the matched text. "
                         + "Path must be relative to the sandbox root. "
                         + "Use write_file to create a file or replace its whole content.",
-                ToolHandler.schema(
-                        ToolHandler.Prop.string(Field.path, "Relative path to the file to edit (sandboxed)"),
-                        ToolHandler.Prop.string(Field.old_string, "Exact text to replace; must match the file verbatim, including whitespace"),
-                        ToolHandler.Prop.string(Field.new_string, "Replacement text; empty deletes the matched text"),
-                        ToolHandler.Prop.stringEnum(Field.replace_all, "Replace every occurrence instead of requiring a unique match", "true", "false").optional()),
+                Tool.schema(
+                        Tool.Prop.string(Field.path, "Relative path to the file to edit (sandboxed)"),
+                        Tool.Prop.string(Field.old_string, "Exact text to replace; must match the file verbatim, including whitespace"),
+                        Tool.Prop.string(Field.new_string, "Replacement text; empty deletes the matched text"),
+                        Tool.Prop.stringEnum(Field.replace_all, "Replace every occurrence instead of requiring a unique match", "true", "false").optional()),
                 input -> run(input, fs));
     }
 

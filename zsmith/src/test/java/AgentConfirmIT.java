@@ -109,11 +109,11 @@ String runChild(String agentName, int port, String stdin) throws Exception {
     var childSource = childDir.resolve("AgentConfirmChild.java");
     Files.writeString(childSource, """
             import airhacks.zsmith.agent.boundary.Agent;
-            import airhacks.zsmith.tools.control.ToolHandler;
+            import airhacks.zsmith.tools.boundary.Tool;
 
             void main() {
                 var agent = new Agent("%s", "confirm flow test")
-                        .withTool(ToolHandler.of("confirm_tool", "asks before running", input -> {
+                        .withTool(Tool.of("confirm_tool", "asks before running", input -> {
                             IO.println("TOOL_EXECUTED");
                             return "ran";
                         }));

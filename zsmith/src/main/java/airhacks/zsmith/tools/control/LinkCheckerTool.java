@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.io.IOException;
 import java.net.URI;
 import java.net.http.HttpClient;
@@ -60,11 +61,11 @@ public interface LinkCheckerTool {
 
     enum Field { url }
 
-    static ToolHandler create() {
-        return ToolHandler.of(
+    static Tool create() {
+        return Tool.of(
                 "check_link",
                 "Verifies a URL is reachable. Returns status code, final URL after redirects, and content type. Use fetch_url to retrieve page or API content.",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.url, "The URL to check")),
+                Tool.schema(Tool.Prop.string(Field.url, "The URL to check")),
                 LinkCheckerTool::run,
                 true);
     }

@@ -9,14 +9,13 @@ import airhacks.zsmith.tools.control.FetchUrlTool;
 import airhacks.zsmith.tools.control.LinkCheckerTool;
 import airhacks.zsmith.tools.control.ReadAnyFileTool;
 import airhacks.zsmith.tools.control.ReadClipboardTool;
-import airhacks.zsmith.tools.control.ToolHandler;
 import airhacks.zsmith.tools.control.UserConfirmationTool;
 import airhacks.zsmith.tools.control.UserMessageTool;
 import airhacks.zsmith.tools.control.UserQuestionTool;
 import airhacks.zsmith.tools.control.WriteAnyFileTool;
 import airhacks.zsmith.tools.control.WriteClipboardTool;
 
-public enum Tools implements ToolHandler {
+public enum Tools implements Tool {
 
     CALCULATOR(CalculatorTool.create()),
     CURRENT_TIME(CurrentTimeTool.create()),
@@ -31,9 +30,9 @@ public enum Tools implements ToolHandler {
     USER_QUESTION(UserQuestionTool.create()),
     EXECUTE_SCRIPT(ExecuteScriptTool.create());
 
-    private final ToolHandler delegate;
+    private final Tool delegate;
 
-    Tools(ToolHandler delegate) {
+    Tools(Tool delegate) {
         this.delegate = delegate;
     }
 

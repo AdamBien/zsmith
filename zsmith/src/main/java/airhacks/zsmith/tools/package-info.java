@@ -149,7 +149,7 @@
 /// - R17.6 — If the requested file is absent, then the BC shall report that it was not found.
 ///
 /// ## Entities
-/// - Tool, ToolUse, ToolResult, ToolPermission
+/// - Describe, ToolUse, ToolResult, ToolPermission
 ///
 /// ## Decisions
 /// - D1 — Line numbering on `read-file` is opt-in, defaulting to off. _(why: `javaConventionsReviewer` and every other existing prompt parse raw source; rejected: numbering always, which changes output for all current agents, and numbering only when sliced, which leaves whole-file findings uncitable)_

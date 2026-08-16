@@ -7,7 +7,7 @@ import java.util.Map;
 import airhacks.zsmith.benchmark.control.LookupTool;
 import airhacks.zsmith.benchmark.control.Lookups;
 import airhacks.zsmith.benchmark.entity.EfficiencyResult;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /**
  * Parallel-discrimination benchmark for agents. Generates {@code tasks} independent
@@ -42,7 +42,7 @@ public class ParallelDiscriminationBenchmark {
         this.tool = new LookupTool(this.values);
     }
 
-    public ToolHandler tool() {
+    public Tool tool() {
         return this.tool;
     }
 

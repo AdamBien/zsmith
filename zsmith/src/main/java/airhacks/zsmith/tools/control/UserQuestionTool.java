@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.util.function.Function;
 
 import airhacks.zsmith.json.JSONObject;
@@ -8,15 +9,15 @@ public interface UserQuestionTool {
 
     enum Field { question }
 
-    static ToolHandler create() {
+    static Tool create() {
         return create(Console::prompt);
     }
 
-    static ToolHandler create(Function<String, String> promptFunction) {
-        return ToolHandler.of(
+    static Tool create(Function<String, String> promptFunction) {
+        return Tool.of(
                 "user_question",
                 "Asks the user a question and returns the typed answer",
-                ToolHandler.schema(ToolHandler.Prop.string(Field.question, "The question to ask the user")),
+                Tool.schema(Tool.Prop.string(Field.question, "The question to ask the user")),
                 input -> run(input, promptFunction));
     }
 

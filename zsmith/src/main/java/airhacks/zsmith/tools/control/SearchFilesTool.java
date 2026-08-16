@@ -1,5 +1,6 @@
 package airhacks.zsmith.tools.control;
 
+import airhacks.zsmith.tools.boundary.Tool;
 import java.nio.file.Path;
 
 import airhacks.zsmith.json.JSONObject;
@@ -10,19 +11,19 @@ public interface SearchFilesTool {
 
     enum Field { pattern, ending }
 
-    static ToolHandler of(String sandboxPath) {
+    static Tool of(String sandboxPath) {
         return create(new SandboxedFileSystem(Path.of(sandboxPath)));
     }
 
-    static ToolHandler create(SandboxedFileSystem fs) {
-        return ToolHandler.of(
+    static Tool create(SandboxedFileSystem fs) {
+        return Tool.of(
                 "search_files",
                 "Searches file contents within the sandbox directory for a regular expression. "
                         + "Returns matching lines as <relative-path>:<line-number>: <line>, like grep -n. "
                         + "Pass ending to restrict the search to files with that name suffix.",
-                ToolHandler.schema(
-                        ToolHandler.Prop.string(Field.pattern, "Regular expression to search for"),
-                        ToolHandler.Prop.string(Field.ending, "File name suffix filter, e.g. \".java\"; omit to search all files").optional()),
+                Tool.schema(
+                        Tool.Prop.string(Field.pattern, "Regular expression to search for"),
+                        Tool.Prop.string(Field.ending, "File name suffix filter, e.g. \".java\"; omit to search all files").optional()),
                 input -> run(input, fs));
     }
 

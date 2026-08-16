@@ -1,7 +1,6 @@
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.tools.boundary.Tool;
-import airhacks.zsmith.tools.control.ToolHandler;
 
 /// Traces tools spec R1.6 — see src/main/java/airhacks/zsmith/tools/package-info.java
 
@@ -21,7 +20,7 @@ record EchoTool() implements Tool {
 
     @Override
     public JSONObject inputSchema() {
-        return ToolHandler.schema(ToolHandler.Prop.string(Field.text, "the text to echo"));
+        return Tool.schema(Tool.Prop.string(Field.text, "the text to echo"));
     }
 
     @Override

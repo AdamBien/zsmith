@@ -16,7 +16,7 @@ import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.telemetry.boundary.EventLog;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
 
 /// Scores a real agent run from a written recording — the path benchmark scoring would take.
@@ -79,8 +79,8 @@ void main() throws Exception {
 
 String scoresARecordedRun(java.nio.file.Path recordingFile) throws Exception {
     var agentName = "scored-agent";
-    var echo = ToolHandler.of("echo", "Answers with a fixed token", _ -> "ok");
-    var detonate = ToolHandler.of("detonate", "Always fails", _ -> {
+    var echo = Tool.of("echo", "Answers with a fixed token", _ -> "ok");
+    var detonate = Tool.of("detonate", "Always fails", _ -> {
         throw new IllegalStateException("boom");
     });
 

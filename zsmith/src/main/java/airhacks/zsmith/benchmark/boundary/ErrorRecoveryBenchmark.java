@@ -8,7 +8,7 @@ import airhacks.zsmith.benchmark.control.TransientFaultTool;
 import airhacks.zsmith.benchmark.entity.Chain;
 import airhacks.zsmith.benchmark.entity.Hop;
 import airhacks.zsmith.benchmark.entity.RecoveryResult;
-import airhacks.zsmith.tools.control.ToolHandler;
+import airhacks.zsmith.tools.boundary.Tool;
 
 /**
  * Error-recovery benchmark for agents. The same pointer chase as
@@ -63,7 +63,7 @@ public class ErrorRecoveryBenchmark {
         return keys;
     }
 
-    public ToolHandler tool() {
+    public Tool tool() {
         return this.tool;
     }
 

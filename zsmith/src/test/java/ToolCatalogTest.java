@@ -11,12 +11,12 @@ import airhacks.zsmith.tools.control.ToolPermission;
 import airhacks.zsmith.tools.control.ToolRegistry;
 import airhacks.zsmith.tools.control.UserMessageTool;
 import airhacks.zsmith.tools.control.UserQuestionTool;
-import airhacks.zsmith.tools.entity.Tool;
+import airhacks.zsmith.tools.entity.Describe;
 
 /// Traces tools spec R1.1, R1.5, R2.2, R2.4, R10.1 - R10.3, R11.1, R15.1, R15.2
 /// — see src/main/java/airhacks/zsmith/tools/package-info.java
 
-@Tool(description = "Greets by name")
+@Describe("Greets by name")
 record GreetPersonTool(String name) implements RecordTool {
     @Override
     public String execute() {
