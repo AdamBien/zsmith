@@ -31,6 +31,8 @@
 /// - R2.8 — The BC shall emit an observable turn event for every loop iteration.
 /// - R2.9 — The BC shall give every turn of one conversation the same run identifier, and where the conversation was started by a delegating run, shall record that run and its depth on each turn. _(why: the events of a run are only joinable if they share a key, and a delegated run is otherwise orphaned)_
 /// - R2.10 — Where transcript storage is enabled, the BC shall store the conversation under the run identifier when the loop ends. _(why: the events carry the key, not the content — the content has to be findable by the same key)_
+/// - R2.11 — When a turn's LLM call reports token usage, the BC shall display the run's accumulated input and output counts alongside that turn's progress, and the accumulated total when the loop ends. _(why: a per-call line shows what one call cost; only a running total shows a loop drifting toward an expensive run while there are still turns left to stop it)_
+/// - R2.12 — When the loop ends, the BC shall discard the run's tally. _(why: a served agent runs many conversations in one process, and a tally kept per run it ever ran never stops growing)_
 ///
 /// ### R3: Execute tools
 /// - R3.1 — If a requested tool is not registered, then the BC shall answer the request with an error result.
@@ -71,5 +73,5 @@
 /// - sub-agent dispatch mechanics (`subagent`)
 /// - the identity a run is recorded under and how it propagates (`correlation`)
 /// - transcript storage and its format (`transcripts`)
-/// - reading the recorded events back (`telemetry`)
+/// - folding recorded events into per-run reports (`telemetry`) — the running tally this loop displays is read from that BC, never accumulated here
 package airhacks.zsmith.agent;
