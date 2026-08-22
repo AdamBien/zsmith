@@ -19,6 +19,9 @@ import airhacks.zsmith.telemetry.boundary.EventLog;
 import airhacks.zsmith.tools.boundary.Tool;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
 
+/// Traces telemetry spec R1.1 and R2.1–R2.3, R2.6–R2.7 — see
+/// src/main/java/airhacks/zsmith/telemetry/package-info.java
+///
 /// Scores a real agent run from a written recording — the path benchmark scoring would take.
 ///
 /// File replay rather than a live stream on purpose: a finished file is seen whole, so the
@@ -97,30 +100,47 @@ String scoresARecordedRun(java.nio.file.Path recordingFile) throws Exception {
 }
 
 void assertReport(java.nio.file.Path recordingFile, String agentName) {
+    // R1.1 — When a recording is replayed, the BC shall fold every event it carries into one
+    // report per run identifier, and shall answer only once the recording is exhausted.
     var reports = EventLog.replay(recordingFile);
     if (reports.size() != 1)
-        throw new AssertionError("expected one run in the recording but got: " + reports.keySet());
+        throw new AssertionError("R1.1 — expected one run in the recording but got: " + reports.keySet());
 
-    var report = reports.values().iterator().next();
+    // R2.7 — The BC shall report every run under the identifier its events carry.
+    var runId = reports.keySet().iterator().next();
+    var report = reports.get(runId);
+    if (!runId.equals(report.runId()))
+        throw new AssertionError("R2.7 — the report should be keyed by its own run id, got: " + report.summary());
+    if (runId.isBlank())
+        throw new AssertionError("R2.7 — a recorded run must carry the identifier its events joined on");
+
+    // R2.1 — The BC shall report, per run, the agent that ran it, its depth, and its counts of
+    // turns, tool calls, tool failures, sub-agent dispatches and API calls.
     if (!agentName.equals(report.agent()))
-        throw new AssertionError("the run should name its agent, got: " + report.summary());
+        throw new AssertionError("R2.1 — the run should name its agent, got: " + report.summary());
     if (report.turns() != 3)
-        throw new AssertionError("expected 3 turns, got: " + report.summary());
+        throw new AssertionError("R2.1 — expected 3 turns, got: " + report.summary());
     if (report.toolCalls() != 2 || report.toolFailures() != 1)
-        throw new AssertionError("expected 2 tool calls of which 1 failed, got: " + report.summary());
-    // the failure is keyed by what went wrong, which is the point of carrying the type at all
-    if (!java.util.Map.of("IllegalStateException", 1).equals(report.failures()))
-        throw new AssertionError("expected the thrown type as the failure kind, got: " + report.summary());
+        throw new AssertionError("R2.1 — expected 2 tool calls of which 1 failed, got: " + report.summary());
     if (report.apiCalls() != 3 || report.retries() != 0)
-        throw new AssertionError("expected 3 API calls and no retries, got: " + report.summary());
-    if (!report.terminal() || report.incomplete())
-        throw new AssertionError("a run that ended on end_turn is complete, got: " + report.summary());
+        throw new AssertionError("R2.1 — expected 3 API calls and no retries, got: " + report.summary());
+    if (report.depth() != 0 || report.subAgentDispatches() != 0)
+        throw new AssertionError("R2.1 — a top-level run delegates to nobody, got: " + report.summary());
 
+    // R2.3 — The BC shall report each tool failure keyed by what went wrong: the failure type
+    // when the tool threw, the refusal outcome when it never ran at all.
+    if (!java.util.Map.of("IllegalStateException", 1).equals(report.failures()))
+        throw new AssertionError("R2.3 — expected the thrown type as the failure kind, got: " + report.summary());
+
+    // R2.6 — The BC shall report a run that never reached a terminal turn as incomplete.
+    if (!report.terminal() || report.incomplete())
+        throw new AssertionError("R2.6 — a run that ended on end_turn is complete, got: " + report.summary());
+
+    // R2.2 — The BC shall report a run's token usage with input, output, cache-read and
+    // cache-creation counts held apart.
     var tokens = report.tokens();
     if (tokens.input() != 30 || tokens.output() != 12 || tokens.cacheRead() != 9 || tokens.cacheCreation() != 6)
-        throw new AssertionError("token usage should sum over the calls, got: " + tokens);
-    if (report.depth() != 0 || report.subAgentDispatches() != 0)
-        throw new AssertionError("a top-level run delegates to nobody, got: " + report.summary());
+        throw new AssertionError("R2.2 — the four counts should sum over the calls and stay apart, got: " + tokens);
 }
 
 void handle(HttpExchange exchange) throws IOException {
