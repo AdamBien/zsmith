@@ -34,6 +34,7 @@ import airhacks.zsmith.http.boundary.AgentHttpServer;
 import airhacks.zsmith.http.boundary.ChatEngine;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.logging.control.ProgressBar;
+import airhacks.zsmith.telemetry.boundary.RunTally;
 import airhacks.zsmith.memory.entity.Memory;
 import airhacks.zsmith.memory.entity.Message;
 import airhacks.zsmith.skills.boundary.SkillStore;
@@ -383,7 +384,6 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             turnEvent.iteration = iteration;
             turnEvent.begin();
             try {
-                progress.update(iteration + 1);
                 var toolChoice = ToolChoice.forTurn(iteration);
                 var response = ScopedValue.where(Correlations.CURRENT, correlation)
                         .call(() -> LLM.invoke(
@@ -393,6 +393,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                                 this.temperature,
                                 toolChoice));
                 progress.addLLMInvocation();
+                progress.update(iteration + 1, RunTally.runningTokens(runId));
 
                 var content = response.getJSONArray("content");
                 var stopReason = response.optString("stop_reason", "end_turn");
@@ -470,7 +471,8 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 Log.agent("last assistant text: " + truncate(lastText, 500));
             }
             storeTranscript(runId, exitReason, turns);
-            progress.summary();
+            progress.summary(RunTally.runningTokens(runId));
+            RunTally.discard(runId);
         }
     }
 

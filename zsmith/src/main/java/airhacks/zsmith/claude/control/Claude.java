@@ -16,6 +16,8 @@ import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.correlation.control.Correlations;
+import airhacks.zsmith.telemetry.boundary.RunTally;
+import airhacks.zsmith.telemetry.entity.TokenUsage;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.control.OpenAI;
@@ -334,6 +336,8 @@ public interface Claude {
         event.statusCode = response.statusCode();
         populateUsage(event, response);
         logTokens(event);
+        RunTally.tally(correlation.runId(), new TokenUsage(event.inputTokens, event.outputTokens,
+                event.cacheReadTokens, event.cacheCreationTokens));
         if (event.shouldCommit()) {
             event.commit();
         }

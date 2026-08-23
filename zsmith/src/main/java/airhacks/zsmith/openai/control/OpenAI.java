@@ -13,6 +13,8 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.correlation.control.Correlations;
+import airhacks.zsmith.telemetry.boundary.RunTally;
+import airhacks.zsmith.telemetry.entity.TokenUsage;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
@@ -66,6 +68,7 @@ public interface OpenAI {
         var anthropicResponse = translateResponse(openaiResponse);
         event.stopReason = anthropicResponse.optString("stop_reason", null);
         logTokens(event);
+        RunTally.tally(correlation.runId(), new TokenUsage(event.inputTokens, event.outputTokens, 0, 0));
         if (event.shouldCommit()) {
             event.commit();
         }

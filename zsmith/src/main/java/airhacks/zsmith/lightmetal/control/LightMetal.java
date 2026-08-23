@@ -9,6 +9,8 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.correlation.control.Correlations;
+import airhacks.zsmith.telemetry.boundary.RunTally;
+import airhacks.zsmith.telemetry.entity.TokenUsage;
 import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
@@ -58,6 +60,7 @@ public interface LightMetal {
         event.model = response.optString("model", event.model);
         populateUsage(event, response);
         logTokens(event);
+        RunTally.tally(correlation.runId(), new TokenUsage(event.inputTokens, event.outputTokens, 0, 0));
         if (event.shouldCommit()) {
             event.commit();
         }

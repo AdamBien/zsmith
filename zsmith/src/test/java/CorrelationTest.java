@@ -24,7 +24,7 @@ import airhacks.zsmith.json.JSONObject;
 import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
 
-/// Traces agent spec R2.9 and R3.6 — see src/main/java/airhacks/zsmith/agent/package-info.java
+/// Traces agent spec R2.9, R3.6 and R3.7 — see src/main/java/airhacks/zsmith/agent/package-info.java
 ///
 /// Every scenario asserts across the executor boundary on purpose. A scoped value is not
 /// inherited by a thread submitted to a plain executor, so a correlation read from ambient
@@ -236,6 +236,9 @@ void linksASequentialSubAgentRunToTheRunThatDelegated(ScriptedLLM llm) throws Ex
 /// executor. Its depth used to be read from ambient scope, which that thread does not
 /// inherit, so a nested agent silently restarted the count at zero and the depth ceiling
 /// stopped meaning anything.
+// R3.7 — When a tool is executed concurrently, the BC shall make the run identifier available
+// to what the tool itself invokes: this child is dispatched from inside a parallel tool, so it
+// can only name its parent run if the correlation crossed the executor.
 void keepsTheDepthOfASubAgentDispatchedInParallel(ScriptedLLM llm) throws Exception {
     var home = Files.createTempDirectory("zsmith-parallel-subagent");
     var originalHome = System.getProperty("user.home");
@@ -253,7 +256,7 @@ void keepsTheDepthOfASubAgentDispatchedInParallel(ScriptedLLM llm) throws Except
 
         try (var recorded = new Recorded(5)) {
             parent.chat("go");
-            recorded.awaitAll("R2.9 parallel sub-agent");
+            recorded.awaitAll("R2.9/R3.7 parallel sub-agent");
             assertChildLinksToParent(recorded, child.name(), parent.name());
         }
     } finally {
