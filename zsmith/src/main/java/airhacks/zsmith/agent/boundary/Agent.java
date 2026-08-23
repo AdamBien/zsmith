@@ -33,6 +33,7 @@ import airhacks.zsmith.agentcore.boundary.AgentCoreServer;
 import airhacks.zsmith.http.boundary.AgentHttpServer;
 import airhacks.zsmith.http.boundary.ChatEngine;
 import airhacks.zsmith.logging.control.Log;
+import airhacks.zsmith.logging.boundary.LogSink;
 import airhacks.zsmith.logging.control.ProgressBar;
 import airhacks.zsmith.telemetry.boundary.EventCapture;
 import airhacks.zsmith.telemetry.boundary.RunTally;
@@ -365,9 +366,10 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     }
 
     String chatLoop(ProgressBar progress) {
-        /// Before the first turn, so the capture holds the whole run. A sub-agent asks too and is
-        /// declined — the loop already running owns the capture, and it is the one this run
-        /// belongs to.
+        /// Where output goes is settled before any is produced, so everything this run reports
+        /// lands in one place. Both are declined for a sub-agent: the loop already running owns
+        /// them, and it is the one this run belongs to.
+        LogSink.directDiagnostics(this.name);
         EventCapture.recordEvents(this.name);
         var toolCounts = new HashMap<String, Integer>();
         /// Blank and depth 0 for a top-level chat; the delegating run and its depth when a
