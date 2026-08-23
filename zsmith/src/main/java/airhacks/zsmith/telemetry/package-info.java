@@ -13,6 +13,10 @@
 /// - `report-running-tokens` — return what a run has spent so far
 /// - `discard-run-tally` — release a finished run's tally
 ///
+/// <!-- capturing a run for later -->
+/// - `record-events` — begin capturing this JVM's events to a file for a named agent
+/// - `stop-recording` — write the capture out and release it
+///
 /// ## Requirements
 /// ### R1: Fold events into per-run reports
 /// - R1.1 — When a recording is replayed, the BC shall fold every event it carries into one report per run identifier, and shall answer only once the recording is exhausted. _(why: a number that gets compared against another run's has to be scored from the whole file, identically on every read)_
@@ -40,6 +44,16 @@
 /// - R3.6 — When a run's tally is discarded, the BC shall release it. _(why: a long-lived process would otherwise retain one tally for every run it has ever executed)_
 /// - R3.7 — The BC shall report a tally's total as the sum of its input, output, cache-read and cache-creation counts.
 ///
+/// ### R4: Capture a run without a launcher flag
+/// - R4.1 — Where event capture is enabled, the BC shall capture this JVM's events to a file when a capture is requested. _(why: a recording was only obtainable by editing a launcher flag into every script, which no configuration could turn on and which does not travel when the script is copied)_
+/// - R4.2 — Where event capture is not enabled, the BC shall capture nothing when a capture is requested. _(why: a recording is the whole run on disk, which is the user's call and not a side effect of upgrading)_
+/// - R4.3 — When a capture is requested for a named agent, the BC shall write it under that agent's own directory.
+/// - R4.4 — When a capture is written, the BC shall name it so that concurrent runs do not overwrite one another. _(why: two runs of the same agent overlap routinely, and the second silently replacing the first destroys the evidence the capture exists to keep)_
+/// - R4.5 — If this JVM is already capturing events to a file, then the BC shall not begin a second capture. _(why: a launcher flag already covers the run; a second capture doubles the cost and records every event twice)_
+/// - R4.6 — When the JVM exits while capturing, the BC shall write the capture to its destination. _(why: an agent run ends by exiting, so a capture that only survives an explicit stop would be lost on every real run)_
+/// - R4.7 — When a capture is stopped, the BC shall write it to its destination and release it.
+/// - R4.8 — If a capture cannot be started or written, then the BC shall report the failure and leave the run unaffected. _(why: auditing must never take down the run it audits)_
+///
 /// ## Entities
 /// - RunReport — what one run cost and where it went wrong
 /// - TokenUsage — one run's spend, input, output, cache-read and cache-creation held apart
@@ -56,5 +70,7 @@
 /// - Deciding which LLM calls report usage — a transport reports what it received
 /// - Turning token counts into money
 /// - Displaying a run's progress while it runs (`agent`)
-/// - Persisting a report or a tally beyond the process
+/// - Persisting a report or a tally beyond the process — a capture holds events, never reports
+/// - Deciding when a run is worth capturing — capture is all-or-nothing per JVM, by configuration
+/// - Reading a capture back into reports is `replay-recording`, which does not care who wrote the file
 package airhacks.zsmith.telemetry;
