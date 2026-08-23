@@ -1,6 +1,6 @@
 # zsmith
 
-Zero-dependency AI agent framework with tool execution, SKILL.md and agentic loop support. The entire framework is a single **192 KB** jar — no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon — drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
+Zero-dependency AI agent framework with tool execution, SKILL.md and agentic loop support. The entire framework is a single **296 KB** jar — no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon — drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
 
 ![zsmith](zsmith.png)
 
@@ -101,12 +101,13 @@ Predefined tool groupings for common use cases:
 ```java
 var agent = new Agent("assistant")
         .withUserIOTools()   // user_message, user_question, user_confirmation
-        .withFileIOTools()   // read_file, write_file, list_files, list_files_ending, search_files, read_any_file (sandboxed)
-        .withAllTools();     // calculator, current_time, clipboard, read_any_file,
-                             // check_link, user_confirmation, user_message, user_question
+        .withFileIOTools()   // every sandboxed file tool, plus read_any_file and write_any_file
+        .withAllTools();     // every tool in the Tools enum
 ```
 
 `withAllTools()` includes all tools from the `Tools` enum. Sandboxed file tools (`read_file`, `write_file`, `list_files`) require `withFileIOTools()` because they need a configured `sandbox.path`.
+
+> **`withFileIOTools()` is not a sandbox.** It grants the seven sandboxed tools *and* `read_any_file` and `write_any_file`, which reach any absolute path on the filesystem. `withAllTools()` includes those two as well, plus `execute_script`. To confine an agent to one directory, use `withSandbox(root, ...)` — it grants only sandboxed handlers and withholds every unconfined one.
 
 `withSandbox(root, tools...)` grants sandboxed file tools on an explicit root directory instead of the configured `sandbox.path` — select tools via the `SandboxTools` enum, or omit the selection to grant all of them:
 
@@ -230,10 +231,17 @@ If no file is found, the constructor parameter is used as fallback.
 zsmith ships with three clients, selected at runtime via `llm.provider`:
 
 ```properties
-llm.provider=claude         # default — Anthropic Messages API
-# llm.provider=bedrock      # Amazon Bedrock Mantle (Anthropic-compatible, reuses the Claude client)
-# llm.provider=openai       # OpenAI Chat Completions API
-# llm.provider=lightmetal   # local GGUF inference via lightmetal.jar (in-process)
+# Anthropic Messages API (the default)
+llm.provider=claude
+
+# Amazon Bedrock Mantle — Anthropic-compatible, reuses the Claude client
+#llm.provider=bedrock
+
+# OpenAI Chat Completions API
+#llm.provider=openai
+
+# local GGUF inference via lightmetal.jar, in-process
+#llm.provider=lightmetal
 ```
 
 Agent code is unchanged either way — request and response are translated internally so the Agent loop only ever sees Anthropic-shaped content blocks.
@@ -253,10 +261,17 @@ claude.port=8080
 Any Anthropic-compatible gateway can be reached by overriding these optional knobs — all default to the native Anthropic values, so leaving them unset preserves current behavior:
 
 ```properties
-claude.path=/v1/messages              # request path (default)
-claude.model=claude-opus-4-8          # payload model id; default derived from -Dmodel / enum
-anthropic.auth.header=x-api-key       # name of the auth header carrying anthropic.api.key
-anthropic.workspace.id=               # adds anthropic-workspace-id header only when set
+# request path
+claude.path=/v1/messages
+
+# payload model id; default derived from -Dmodel / enum
+claude.model=claude-opus-4-8
+
+# name of the auth header carrying anthropic.api.key
+anthropic.auth.header=x-api-key
+
+# adds the anthropic-workspace-id header only when set
+anthropic.workspace.id=
 ```
 
 For a `Bearer`-token gateway, set `anthropic.auth.header=Authorization` and put the prefix in the key: `anthropic.api.key=Bearer <token>`.
@@ -269,8 +284,10 @@ Because the native Anthropic and Bedrock settings never collide, **both can live
 
 ```properties
 # --- switch provider here ---
-llm.provider=claude        # native Anthropic API
-#llm.provider=bedrock      # Amazon Bedrock Mantle
+# native Anthropic API
+llm.provider=claude
+# Amazon Bedrock Mantle
+#llm.provider=bedrock
 
 # --- native Anthropic ---
 anthropic.api.key=sk-ant-...
@@ -281,7 +298,8 @@ bedrock.region=eu-north-1
 bedrock.api.key=bedrock-api-...
 
 # --- shared ---
-claude.model=claude-haiku-4-5  # bare name works for both; pick one your Bedrock account can use
+# a bare name works for both providers; pick one your Bedrock account can use
+claude.model=claude-haiku-4-5
 ```
 
 When `llm.provider=bedrock`, zsmith derives:
@@ -302,9 +320,14 @@ Bedrock Mantle also serves **non-Anthropic** models — such as [NVIDIA Nemotron
 
 ```properties
 llm.provider=bedrock
-bedrock.region=eu-west-1                       # pick a region that offers the model (see model card)
+
+# pick a region that offers the model (see model card)
+bedrock.region=eu-west-1
+
 bedrock.api.key=bedrock-api-...
-claude.model=nvidia.nemotron-super-3-120b      # id carries a '.', used verbatim — no anthropic. prefix
+
+# the id carries a '.', so it is used verbatim — no anthropic. prefix
+claude.model=nvidia.nemotron-super-3-120b
 ```
 
 For such models zsmith derives:
@@ -323,12 +346,15 @@ For such models zsmith derives:
 By default, requests go to `https://api.openai.com/v1/chat/completions`. Configurable knobs:
 
 ```properties
-openai.api.key=sk-...      # optional — omitted Authorization header when blank (useful for local servers)
-openai.model=gpt-4o        # default
-openai.max.tokens=4096     # default
-openai.scheme=https        # default
-openai.host=api.openai.com # default
-openai.port=                # default unset (uses scheme default port)
+# every value below is the default; all of them are optional.
+# a blank api key omits the Authorization header, which local servers usually want
+openai.api.key=sk-...
+openai.model=gpt-4o
+openai.max.tokens=4096
+openai.scheme=https
+openai.host=api.openai.com
+# unset uses the scheme default port
+openai.port=
 ```
 
 The OpenAI client has no fallback model — unlike Claude's 529→fallback retry, OpenAI errors propagate directly.
@@ -350,8 +376,11 @@ LM Studio (default port 1234), llama.cpp `--api`, and vLLM expose the same Chat 
 [LightMetal](https://github.com/AdamBien/lightmetal) is a Java 25 GGUF runner that talks to Apple Silicon's Metal via the Foreign Function & Memory API. zsmith reaches it via the `UnaryOperator<String>` SPI (`lm.generation.boundary.LightMetalChat`), so the only compile-time dependency is `java.base` — drop `lightmetal.jar` on the classpath at runtime and the provider is **auto-selected**, overruling `llm.provider` whatever it is set to. The classpath is the explicit signal; no extra config is needed. The GGUF is loaded once on the first call and reused for every subsequent turn.
 
 ```properties
-lightmetal.model=/abs/path/to/model.gguf   # optional — overrides lightmetal's own config
-lightmetal.max.tokens=4096                 # optional — default 4096
+# optional — overrides lightmetal's own config
+lightmetal.model=/abs/path/to/model.gguf
+
+# optional — defaults to 4096
+lightmetal.max.tokens=4096
 ```
 
 `lightmetal.model` is **optional** in zsmith. When unset, zsmith omits `model` from the request payload entirely — lightmetal then sources it from its own eager-loaded `~/.lightmetal/app.properties` (or `-Dmodel=...`). So a user who already runs `lmprompt`/`lmserve` against a configured `~/.lightmetal/app.properties` needs zero zsmith-side model config. Set `lightmetal.model` in zsmith only when you want one agent to override the lightmetal-wide default.
@@ -477,7 +506,7 @@ An inline-tool variant — see [`examples/currentDate`](examples/currentDate) �
 import java.time.LocalDate;
 
 import airhacks.zsmith.agent.boundary.Agent;
-import airhacks.zsmith.tools.control.Tool;
+import airhacks.zsmith.tools.boundary.Tool;
 
 void main() {
 
@@ -532,6 +561,8 @@ Open `calculator.jfr` in JDK Mission Control and filter the event browser by cat
 |-------|----------|------------------|
 | `airhacks.zsmith.agent.Turn` | `zsmith / agent` | One iteration of the chat loop with stop reason and tool counts |
 | `airhacks.zsmith.claude.APICall` | `zsmith / claude` | HTTP call to the Anthropic Messages API with token usage and attempt number |
+| `airhacks.zsmith.openai.APICall` | `zsmith / openai` | HTTP call to the OpenAI Chat Completions API with token usage |
+| `airhacks.zsmith.lightmetal.APICall` | `zsmith / lightmetal` | In-process GGUF generation call with token usage |
 | `airhacks.zsmith.tools.Invocation` | `zsmith / tools` | Single tool execution with outcome, result size, and failure type |
 | `airhacks.zsmith.subagent.Dispatch` | `zsmith / subagent` | Delegation to a sub-agent |
 | `airhacks.zsmith.skills.Load` | `zsmith / skills` | Skill read from disk during `SkillStore` init |
@@ -780,7 +811,10 @@ var agent = new Agent("coordinator")
 | `ListFilesTool` | `list_files` | Lists all files within the sandbox directory |
 | `ListFilesEndingTool` | `list_files_ending` | Lists all files within the sandbox directory whose names end with a given suffix |
 | `SearchFilesTool` | `search_files` | Searches sandbox file contents for a regular expression; returns `path:line: text` matches like `grep -n`, optionally filtered by file suffix |
-| `ReadAnyFileTool` | `read_any_file` | Reads a file from any location on the filesystem |
+| `EditFileTool` | `edit_file` | Replaces an exact, verbatim occurrence of one string with another in a sandboxed file |
+| `FindFilesTool` | `find_files` | Lists sandboxed files whose name or relative path matches a glob pattern |
+| `ReadAnyFileTool` | `read_any_file` | Reads a file from any location on the filesystem — **not sandboxed** |
+| `WriteAnyFileTool` | `write_any_file` | Writes a file at any absolute path, overwriting or appending — **not sandboxed** |
 | `LinkCheckerTool` | `check_link` | Verifies a URL is reachable; returns status code, final URL after redirects, and content type |
 | `FetchUrlTool` | `fetch_url` | Fetches a URL with a browser User-Agent and returns status, content type, and up to 20000 chars of the body |
 | `UserConfirmationTool` | `user_confirmation` | Asks the user a yes/no question and returns the answer |
