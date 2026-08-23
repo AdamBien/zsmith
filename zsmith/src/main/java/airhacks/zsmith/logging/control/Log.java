@@ -1,6 +1,7 @@
 package airhacks.zsmith.logging.control;
 
 import java.io.PrintStream;
+import java.util.EnumSet;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 
@@ -23,7 +24,12 @@ public enum Log {
     LLM("🧩", Color.BASE01, System.out, "log.llm"),
     TOKENS("🪙", Color.BASE0, System.out);
 
-    private PrintStream out;
+    /// Resolved at write time rather than captured, so redirecting the process streams works.
+    private final boolean toError;
+
+    /// The conversation with the person running the agent, plus anything that has gone wrong.
+    /// These are the user interface, not reporting about it, so no destination setting moves them.
+    static final EnumSet<Log> PINNED = EnumSet.of(USER, ANSWER, PROMPT, ERROR, WARNING);
 
     enum Color {
         // Accents
@@ -60,7 +66,7 @@ public enum Log {
     private Log(String emoji, Color color, PrintStream out, String configKey) {
         this.emoji = emoji;
         this.value = (color.code + "%s" + RESET);
-        this.out = out;
+        this.toError = (out == System.err);
         this.configKey = configKey;
     }
 
@@ -69,21 +75,32 @@ public enum Log {
     }
 
     void out(String message) {
-        if (configKey != null && !ZCfg.bool(configKey, false)) return;
-        var colored = formatted(message);
-        this.out.println(colored);
+        write(formatted(message), true);
     }
 
     void outInline(String message) {
-        if (configKey != null && !ZCfg.bool(configKey, false)) return;
-        var colored = formatted(message);
-        this.out.print(colored);
+        write(formatted(message), false);
     }
 
     void outEndline(String message) {
-        if (configKey != null && !ZCfg.bool(configKey, false)) return;
-        var colored = formatted(message);
-        this.out.println(" " + colored);
+        write(" " + formatted(message), true);
+    }
+
+    /// Where output goes is a separate question from whether it is produced: a channel switched
+    /// off stays off whatever the destination.
+    void write(String colored, boolean newline) {
+        if (this.configKey != null && !ZCfg.bool(this.configKey, false)) {
+            return;
+        }
+        if (PINNED.contains(this)) {
+            Diagnostics.print(console(), colored, newline);
+            return;
+        }
+        Diagnostics.write(console(), colored, newline);
+    }
+
+    PrintStream console() {
+        return this.toError ? System.err : System.out;
     }
 
     public static void error(String message) {
