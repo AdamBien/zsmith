@@ -34,6 +34,7 @@ import airhacks.zsmith.http.boundary.AgentHttpServer;
 import airhacks.zsmith.http.boundary.ChatEngine;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.logging.control.ProgressBar;
+import airhacks.zsmith.telemetry.boundary.EventCapture;
 import airhacks.zsmith.telemetry.boundary.RunTally;
 import airhacks.zsmith.memory.entity.Memory;
 import airhacks.zsmith.memory.entity.Message;
@@ -364,6 +365,10 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     }
 
     String chatLoop(ProgressBar progress) {
+        /// Before the first turn, so the capture holds the whole run. A sub-agent asks too and is
+        /// declined — the loop already running owns the capture, and it is the one this run
+        /// belongs to.
+        EventCapture.recordEvents(this.name);
         var toolCounts = new HashMap<String, Integer>();
         /// Blank and depth 0 for a top-level chat; the delegating run and its depth when a
         /// sub-agent is running, which is what links a child run back into the tree.
