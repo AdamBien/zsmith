@@ -1,6 +1,6 @@
 # zsmith
 
-Zero-dependency AI agent framework with tool execution, SKILL.md and agentic loop support. The entire framework is a single **296 KB** jar — no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon — drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
+Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop support. The entire framework is a single **296 KB** jar — no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon — drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
 
 ![zsmith](zsmith.png)
 
@@ -28,7 +28,7 @@ Based on the [`java-cli-script`](https://airails.dev) skill from [airails.dev](h
 
 Install the jar, add your API key, and run your first agent in under a minute.
 
-**1. Install the jar** (see [Installation](#installation)) — it lands in `./zbo/zsmith.jar`.
+**1. Install the jar** (see [Installation](#installation)). It is copied to: `./zbo/zsmith.jar`.
 
 **2. Add your Anthropic API key** to `~/.zsmith/app.properties`:
 
@@ -214,6 +214,32 @@ tools.permissions.default=allow
 tools.permissions.execute_script=confirm
 ```
 
+### Logging
+
+Agent output is split by role. What the agent **asks and answers** — prompts, the final response, failures, warnings, and the progress bar — always goes to the console: a question the agent blocks on is useless where nobody can read it. Everything else — turns, tool calls, token counts, wire payloads — is *reporting about* the run and can be sent elsewhere:
+
+```properties
+# console (default) | file | both
+log.sink=file
+```
+
+`file` writes to `~/.zsmith/[agentName]/logs/[agentName]-[pid].log`, beside that agent's memories and recordings, named by process so concurrent runs never overwrite one another. `both` keeps the console copy as well. An unopenable destination degrades to the console with a warning rather than failing the run.
+
+Three high-volume channels are off by default and are the usual reason a terminal becomes unreadable during an interactive run:
+
+```properties
+# full outgoing API payload
+log.request=true
+# full raw API response
+log.response=true
+# the >> / << wire trace
+log.llm=true
+```
+
+Switching a channel off keeps it off whatever `log.sink` says — where output goes and whether it is produced are separate questions. Every other channel (`agent`, `tool`, `skill`, `memory`, `tokens`, `subagent`, `debug`, `info`) prints unconditionally and follows `log.sink`.
+
+> Combining `log.request`/`log.response` with an agent that uses `user_question` on the console is what makes prompts scroll away mid-conversation. `log.sink=file` is the fix — you keep the payloads without them competing for the terminal.
+
 ### System Prompt
 
 Loaded from `system.prompt` files in order (each layer overrides the previous):
@@ -223,6 +249,74 @@ Loaded from `system.prompt` files in order (each layer overrides the previous):
 3. `./system.prompt` — highest priority
 
 If no file is found, the constructor parameter is used as fallback.
+
+### Agent Defaults
+
+Every `new Agent(...)` argument falls back to configuration, so an agent constructed with no arguments is fully configurable from a properties file:
+
+```properties
+agent.name=zsmith
+agent.system.prompt=You are a helpful assistant.
+agent.max.iterations=100
+agent.temperature=0.1
+```
+
+`agent.max.iterations` bounds the chat loop — reaching it ends the run with "Max iterations reached" rather than looping forever.
+
+### Timeouts
+
+Three independent families, all ISO-8601 durations (`PT10S`, `PT5M` — whatever `Duration.parse` accepts). Each defaults to a value that fails a stuck call rather than hanging a turn:
+
+| Key | Default | Applies to |
+|-----|---------|------------|
+| `http.connect.timeout` | `PT10S` | every LLM call (Claude, Bedrock, OpenAI) |
+| `http.request.timeout` | `PT5M` | every LLM call — generous, since generation is slow |
+| `fetch.connect.timeout` | `PT10S` | the `fetch_url` tool |
+| `fetch.request.timeout` | `PT15S` | the `fetch_url` tool |
+| `link.connect.timeout` | `PT10S` | the `check_link` tool |
+| `link.request.timeout` | `PT10S` | the `check_link` tool |
+
+Tool timeouts are shorter than LLM timeouts on purpose: a slow page should fail its tool call and let the agent continue, not stall the turn.
+
+### Prompt Caching
+
+**On by default.** The system prompt, tool definitions, and conversation prefix are marked with `cache_control`, so repeated turns re-send the same prefix at the cached rate — visible in the `cache_read` counts on the progress bar and in `RunReport`:
+
+```properties
+# switch caching off entirely
+claude.cache=false
+
+# optional extended time-to-live, passed through to the API as given
+claude.cache.ttl=1h
+```
+
+Leave `claude.cache.ttl` unset to use the API default. See [prompt caching](https://docs.claude.com/en/docs/build-with-claude/prompt-caching).
+
+### Thinking and Effort
+
+Both are unset by default and are only sent to models whose capability set declares support — configuring them for a model that lacks it is ignored rather than rejected:
+
+```properties
+# adaptive thinking, sent only by models that support it
+claude.thinking=adaptive
+
+# only honoured when claude.thinking=adaptive
+claude.thinking.display=
+
+# effort level, sent only by models that support it
+claude.effort=
+```
+
+### Sandbox Traversal
+
+Sandboxed file tools skip version-control and build directories, which are the slowest and least informative part of a checked-out repository. The built-in set is `.git`, `.hg`, `.svn`, `target`, `build`, `out`, `bin`, `zbo`, `node_modules`:
+
+```properties
+# a comma separated list, REPLACING the built-in set rather than extending it
+tools.sandbox.ignore=.git,target,vendor
+```
+
+Setting it to an empty value traverses everything.
 
 ### Alternative LLM Providers
 
@@ -549,7 +643,17 @@ Run it directly:
 
 ### JFR Configuration
 
-zsmith emits JDK Flight Recorder events for every agent turn, Claude API call, tool invocation, sub-agent dispatch, skill load, and memory access — all under the `zsmith` category. To record them while running the calculator, add `-XX:StartFlightRecording` to the shebang:
+zsmith emits JDK Flight Recorder events for every agent turn, LLM API call, tool invocation, sub-agent dispatch, skill load, and memory access — all under the `zsmith` category.
+
+The simplest way to record them is configuration — no launcher flag, and it travels with the agent when the script is copied:
+
+```properties
+jfr.enabled=true
+```
+
+The recording starts when an agent begins its first `chat`/`act` and is written to `~/.zsmith/[agentName]/recordings/[agentName]-[pid].jfr` when the JVM exits. Off by default: a recording is the whole run on disk. If the JVM is *already* recording — because you passed the flag below — zsmith leaves that recording alone rather than starting a second one.
+
+Alternatively, add `-XX:StartFlightRecording` to the shebang. This starts earlier, so it also captures JVM startup:
 
 ```java
 #!/usr/bin/java -XX:StartFlightRecording=filename=calculator.jfr,dumponexit=true,settings=profile --class-path=../zsmith/zbo/zsmith.jar --source 25
