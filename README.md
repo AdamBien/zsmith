@@ -1,14 +1,14 @@
 # zsmith
 
-Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop support. The entire framework is a single **296 KB** jar — no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon — drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
+Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop support. The entire framework is a single **296 KB** jar, with no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon: drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
 
 ![zsmith](zsmith.png)
 
 ## Requirements
 
-- **Java 25+** — uses implicit classes, text blocks, records, and source-file mode
-- **Anthropic API key** — set `anthropic.api.key` in `~/.zsmith/app.properties` or as a system property
-- **Build with zb** — run `./zb.sh` to produce `zbo/zsmith.jar` (no Maven/Gradle needed)
+- **Java 25+**: uses implicit classes, text blocks, records, and source-file mode
+- **Anthropic API key**: set `anthropic.api.key` in `~/.zsmith/app.properties` or as a system property
+- **Build with zb**: run `./zb.sh` to produce `zbo/zsmith.jar` (no Maven/Gradle needed)
 
 ## Installation
 
@@ -20,9 +20,9 @@ chmod +x zsinstall
 ./zsinstall
 ```
 
-`zsinstall` is a single-file Java 25 script that downloads the latest release asset from GitHub into `./zbo/zsmith.jar` — matching the `-cp zbo/zsmith.jar` shebang used by the example agents. Re-run any time to upgrade.
+`zsinstall` is a single-file Java 25 script that downloads the latest release asset from GitHub into `./zbo/zsmith.jar`, matching the `-cp zbo/zsmith.jar` shebang used by the example agents. Re-run any time to upgrade.
 
-Based on the [`java-cli-script`](https://airails.dev) skill from [airails.dev](https://airails.dev) — single-file, zero-dependency, shebang-launched Java 25 utilities. Optional local inference via [LightMetal](https://github.com/AdamBien/lightmetal) — a Java 25 GGUF runner for Apple Silicon's Metal via the Foreign Function & Memory API.
+Based on the [`java-cli-script`](https://airails.dev) skill from [airails.dev](https://airails.dev): single-file, zero-dependency, shebang-launched Java 25 utilities. Optional local inference via [LightMetal](https://github.com/AdamBien/lightmetal), a Java 25 GGUF runner for Apple Silicon's Metal via the Foreign Function & Memory API.
 
 ## Quick Start
 
@@ -64,15 +64,15 @@ chmod +x calculator
 ./calculator
 ```
 
-The agent asks for a math expression, evaluates it with the `calculator` tool, prints the result, and loops until you type `quit`. No build step — Java 25 runs the script directly against the prebuilt jar.
+The agent asks for a math expression, evaluates it with the `calculator` tool, prints the result, and loops until you type `quit`. No build step: Java 25 runs the script directly against the prebuilt jar.
 
-**No API key? Run fully on-device.** On Apple Silicon you can skip step 2 entirely: drop [`lightmetal.jar`](#lightmetal-embedded-local-inference) on the classpath and zsmith auto-selects local GGUF inference — no key, no network. Adjust the shebang in step 3:
+**Running without an API key.** On Apple Silicon you can skip step 2 entirely: drop [`lightmetal.jar`](#lightmetal-embedded-local-inference) on the classpath and zsmith auto-selects local GGUF inference, with no key and no network. Adjust the shebang in step 3:
 
 ```java
 #!/usr/bin/java --class-path=zbo/zsmith.jar:lightmetal.jar --enable-native-access=ALL-UNNAMED --source 25
 ```
 
-The agent code is unchanged — see [LightMetal](#lightmetal-embedded-local-inference) for model configuration.
+The agent code is unchanged. See [LightMetal](#lightmetal-embedded-local-inference) for model configuration.
 
 Once this works, read on for the library API, tool profiles, and configuration.
 
@@ -85,7 +85,7 @@ var agent = new Agent("calculator", "You are a helpful assistant.")
 var response = agent.chat("What is 42 * 17?");
 ```
 
-Agentic execution — `act()` sends `"go"` as the user message, letting the system prompt drive the task:
+Agentic execution: `act()` sends `"go"` as the user message, letting the system prompt drive the task:
 
 ```java
 var agent = new Agent("reporter", "Summarize today's tasks.")
@@ -107,9 +107,9 @@ var agent = new Agent("assistant")
 
 `withAllTools()` includes all tools from the `Tools` enum. Sandboxed file tools (`read_file`, `write_file`, `list_files`) require `withFileIOTools()` because they need a configured `sandbox.path`.
 
-> **`withFileIOTools()` is not a sandbox.** It grants the seven sandboxed tools *and* `read_any_file` and `write_any_file`, which reach any absolute path on the filesystem. `withAllTools()` includes those two as well, plus `execute_script`. To confine an agent to one directory, use `withSandbox(root, ...)` — it grants only sandboxed handlers and withholds every unconfined one.
+> **`withFileIOTools()` is not a sandbox.** It grants the seven sandboxed tools *and* `read_any_file` and `write_any_file`, which reach any absolute path on the filesystem. `withAllTools()` includes those two as well, plus `execute_script`. To confine an agent to one directory, use `withSandbox(root, ...)`, which grants only sandboxed handlers and withholds every unconfined one.
 
-`withSandbox(root, tools...)` grants sandboxed file tools on an explicit root directory instead of the configured `sandbox.path` — select tools via the `SandboxTools` enum, or omit the selection to grant all of them:
+`withSandbox(root, tools...)` grants sandboxed file tools on an explicit root directory instead of the configured `sandbox.path`. Select tools via the `SandboxTools` enum, or omit the selection to grant all of them:
 
 ```java
 var reviewer = new Agent("reviewer", "You review Java code.")
@@ -151,7 +151,7 @@ anthropic.version=2023-06-01
 
 ### Example: Anthropic Configuration
 
-A complete `~/.zsmith/app.properties` for the native Anthropic API. `llm.provider` and `claude.model` are shown with their defaults, so both lines are optional — listing them makes the active provider and model explicit:
+A complete `~/.zsmith/app.properties` for the native Anthropic API. `llm.provider` and `claude.model` are shown with their defaults, so both lines are optional; listing them makes the active provider and model explicit:
 
 ```properties
 anthropic.version=2023-06-01
@@ -168,11 +168,11 @@ The default Claude model is `claude-opus-4-8`. Override via system property:
 java -Dmodel=sonnet -cp zbo/zsmith.jar MyAgent.java
 ```
 
-Partial matching works — `sonnet` resolves to `claude-sonnet-4-7`, `4-7` to `claude-opus-4-7`, etc.
+Partial matching works: `sonnet` resolves to `claude-sonnet-4-7`, `4-7` to `claude-opus-4-7`, etc.
 
 ### Forcing the First Tool Call
 
-An agent whose first move is meant to be a question dies on turn one when the model writes the question as prose instead of calling `user_question`: no tool use means `end_turn`, and the loop exits. The opening request therefore carries `"tool_choice": {"type": "any"}` on the Anthropic surface, or `"tool_choice": "required"` on the OpenAI-compatible one — see [forcing tool use](https://docs.claude.com/en/docs/agents-and-tools/tool-use/implement-tool-use) and the [OpenAI chat completions reference](https://platform.openai.com/docs/api-reference/chat/create).
+An agent whose first move is meant to be a question dies on turn one when the model writes the question as prose instead of calling `user_question`: no tool use means `end_turn`, and the loop exits. The opening request therefore carries `"tool_choice": {"type": "any"}` on the Anthropic surface, or `"tool_choice": "required"` on the OpenAI-compatible one. See [forcing tool use](https://docs.claude.com/en/docs/agents-and-tools/tool-use/implement-tool-use) and the [OpenAI chat completions reference](https://platform.openai.com/docs/api-reference/chat/create).
 
 Only the opening turn is forced. Demanding a tool call on every turn would remove the agent loop's sole exit condition and leave it running to `maxIterations`. Requests carrying no tools are untouched, since both APIs reject `tool_choice` on its own.
 
@@ -186,11 +186,11 @@ llm.require.first.tool.call=false
 
 Loaded in order (each layer overrides the previous):
 
-1. `~/.zsmith/app.properties` — global defaults
-2. `./app.properties` — local project defaults
-3. `~/.zsmith/[agentName]/app.properties` — global agent-specific
-4. `./[agentName]/app.properties` — local agent-specific
-5. System properties — highest priority
+1. `~/.zsmith/app.properties`: global defaults
+2. `./app.properties`: local project defaults
+3. `~/.zsmith/[agentName]/app.properties`: global agent-specific
+4. `./[agentName]/app.properties`: local agent-specific
+5. System properties: highest priority
 
 Only keys present in later files override earlier values; other keys are preserved.
 
@@ -216,7 +216,7 @@ tools.permissions.execute_script=confirm
 
 ### Logging
 
-Agent output is split by role. What the agent **asks and answers** — prompts, the final response, failures, warnings, and the progress bar — always goes to the console: a question the agent blocks on is useless where nobody can read it. Everything else — turns, tool calls, token counts, wire payloads — is *reporting about* the run and can be sent elsewhere:
+Agent output is split by role. What the agent **asks and answers** (prompts, the final response, failures, warnings, and the progress bar) always goes to the console: a question the agent blocks on is useless where nobody can read it. Everything else (turns, tool calls, token counts, wire payloads) is *reporting about* the run and can be sent elsewhere:
 
 ```properties
 # console (default) | file | both
@@ -236,17 +236,17 @@ log.response=true
 log.llm=true
 ```
 
-Switching a channel off keeps it off whatever `log.sink` says — where output goes and whether it is produced are separate questions. Every other channel (`agent`, `tool`, `skill`, `memory`, `tokens`, `subagent`, `debug`, `info`) prints unconditionally and follows `log.sink`.
+Switching a channel off keeps it off whatever `log.sink` says; where output goes and whether it is produced are separate questions. Every other channel (`agent`, `tool`, `skill`, `memory`, `tokens`, `subagent`, `debug`, `info`) prints unconditionally and follows `log.sink`.
 
-> Combining `log.request`/`log.response` with an agent that uses `user_question` on the console is what makes prompts scroll away mid-conversation. `log.sink=file` is the fix — you keep the payloads without them competing for the terminal.
+> Combining `log.request`/`log.response` with an agent that uses `user_question` on the console is what makes prompts scroll away mid-conversation. `log.sink=file` is the fix: you keep the payloads without them competing for the terminal.
 
 ### System Prompt
 
 Loaded from `system.prompt` files in order (each layer overrides the previous):
 
-1. `~/.zsmith/[agentName]/system.prompt` — global agent-specific
-2. `./[agentName]/system.prompt` — local agent-specific
-3. `./system.prompt` — highest priority
+1. `~/.zsmith/[agentName]/system.prompt`: global agent-specific
+2. `./[agentName]/system.prompt`: local agent-specific
+3. `./system.prompt`: highest priority
 
 If no file is found, the constructor parameter is used as fallback.
 
@@ -261,16 +261,16 @@ agent.max.iterations=100
 agent.temperature=0.1
 ```
 
-`agent.max.iterations` bounds the chat loop — reaching it ends the run with "Max iterations reached" rather than looping forever.
+`agent.max.iterations` bounds the chat loop; reaching it ends the run with "Max iterations reached" rather than looping forever.
 
 ### Timeouts
 
-Three independent families, all ISO-8601 durations (`PT10S`, `PT5M` — whatever `Duration.parse` accepts). Each defaults to a value that fails a stuck call rather than hanging a turn:
+Three independent families, all ISO-8601 durations (`PT10S`, `PT5M`, or whatever `Duration.parse` accepts). Each defaults to a value that fails a stuck call rather than hanging a turn:
 
 | Key | Default | Applies to |
 |-----|---------|------------|
 | `http.connect.timeout` | `PT10S` | every LLM call (Claude, Bedrock, OpenAI) |
-| `http.request.timeout` | `PT5M` | every LLM call — generous, since generation is slow |
+| `http.request.timeout` | `PT5M` | every LLM call (generous, since generation is slow) |
 | `fetch.connect.timeout` | `PT10S` | the `fetch_url` tool |
 | `fetch.request.timeout` | `PT15S` | the `fetch_url` tool |
 | `link.connect.timeout` | `PT10S` | the `check_link` tool |
@@ -280,7 +280,7 @@ Tool timeouts are shorter than LLM timeouts on purpose: a slow page should fail 
 
 ### Prompt Caching
 
-**On by default.** The system prompt, tool definitions, and conversation prefix are marked with `cache_control`, so repeated turns re-send the same prefix at the cached rate — visible in the `cache_read` counts on the progress bar and in `RunReport`:
+**On by default.** The system prompt, tool definitions, and conversation prefix are marked with `cache_control`, so repeated turns re-send the same prefix at the cached rate, visible in the `cache_read` counts on the progress bar and in `RunReport`:
 
 ```properties
 # switch caching off entirely
@@ -294,7 +294,7 @@ Leave `claude.cache.ttl` unset to use the API default. See [prompt caching](http
 
 ### Thinking and Effort
 
-Both are unset by default and are only sent to models whose capability set declares support — configuring them for a model that lacks it is ignored rather than rejected:
+Both are unset by default and are only sent to models whose capability set declares support; configuring them for a model that lacks it is ignored rather than rejected:
 
 ```properties
 # adaptive thinking, sent only by models that support it
@@ -320,7 +320,7 @@ Setting it to an empty value traverses everything.
 
 ### Alternative LLM Providers
 
-> First-time users can skip this section — the default `claude` provider works out of the box. Come back when you want Amazon Bedrock, OpenAI, or local inference.
+> First-time users can skip this section: the default `claude` provider works out of the box. Come back when you want Amazon Bedrock, OpenAI, or local inference.
 
 zsmith ships with three clients, selected at runtime via `llm.provider`:
 
@@ -328,7 +328,7 @@ zsmith ships with three clients, selected at runtime via `llm.provider`:
 # Anthropic Messages API (the default)
 llm.provider=claude
 
-# Amazon Bedrock Mantle — Anthropic-compatible, reuses the Claude client
+# Amazon Bedrock Mantle (Anthropic-compatible, reuses the Claude client)
 #llm.provider=bedrock
 
 # OpenAI Chat Completions API
@@ -338,7 +338,7 @@ llm.provider=claude
 #llm.provider=lightmetal
 ```
 
-Agent code is unchanged either way — request and response are translated internally so the Agent loop only ever sees Anthropic-shaped content blocks.
+Agent code is unchanged either way; request and response are translated internally so the Agent loop only ever sees Anthropic-shaped content blocks.
 
 #### Claude endpoint
 
@@ -350,9 +350,9 @@ claude.host=localhost
 claude.port=8080
 ```
 
-`claude.port` is optional — omit it to use the scheme default. `claude.scheme` defaults to `https`, `claude.host` to `api.anthropic.com`.
+`claude.port` is optional; omit it to use the scheme default. `claude.scheme` defaults to `https`, `claude.host` to `api.anthropic.com`.
 
-Any Anthropic-compatible gateway can be reached by overriding these optional knobs — all default to the native Anthropic values, so leaving them unset preserves current behavior:
+Any Anthropic-compatible gateway can be reached by overriding these optional knobs. All default to the native Anthropic values, so leaving them unset preserves current behavior:
 
 ```properties
 # request path
@@ -372,7 +372,7 @@ For a `Bearer`-token gateway, set `anthropic.auth.header=Authorization` and put 
 
 #### Amazon Bedrock Mantle
 
-[Amazon Bedrock Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/bedrock-mantle.html) exposes an Anthropic-compatible Messages API at its `bedrock-mantle` endpoint. It is selected with `llm.provider=bedrock` and reuses the Claude client — only the **region**, **model**, and **API key** vary; everything else is convention-derived.
+[Amazon Bedrock Mantle](https://docs.aws.amazon.com/bedrock/latest/userguide/bedrock-mantle.html) exposes an Anthropic-compatible Messages API at its `bedrock-mantle` endpoint. It is selected with `llm.provider=bedrock` and reuses the Claude client. Only the **region**, **model**, and **API key** vary; everything else is convention-derived.
 
 Because the native Anthropic and Bedrock settings never collide, **both can live in the same properties file** and you switch between them by flipping a single line:
 
@@ -401,16 +401,16 @@ When `llm.provider=bedrock`, zsmith derives:
 - **endpoint** → `https://bedrock-mantle.<region>.api.aws/anthropic/v1/messages`
 - **anthropic-version** → `2023-06-01` (override with `anthropic.version` if needed)
 - **API key** → `bedrock.api.key`, falling back to `anthropic.api.key` when unset
-- **project header** → `bedrock.project.id`, mapped to whichever header the active wire accepts — `anthropic-workspace-id` on the Messages route, `openai-project` on the Chat Completions route (see below)
+- **project header** → `bedrock.project.id`, mapped to whichever header the active wire accepts: `anthropic-workspace-id` on the Messages route, `openai-project` on the Chat Completions route (see below)
 - **model prefix** → a **bare** `claude.model` gets the `anthropic.` prefix, so `claude.model=claude-haiku-4-5` resolves to `anthropic.claude-haiku-4-5`
 
-The same bare `claude.model` therefore works under both providers — used as-is for native Anthropic, `anthropic.`-prefixed under Bedrock. An id that already contains a `.` (e.g. `anthropic.claude-haiku-4-5`) is used verbatim. The 529→fallback retry is Anthropic-specific and does not apply to Bedrock model ids.
+The same bare `claude.model` therefore works under both providers: used as-is for native Anthropic, `anthropic.`-prefixed under Bedrock. An id that already contains a `.` (e.g. `anthropic.claude-haiku-4-5`) is used verbatim. The 529→fallback retry is Anthropic-specific and does not apply to Bedrock model ids.
 
 > **Pick a model your account can use.** Bedrock returns `403 … is not available for this account` for models you have not been granted. List/enable models in the Bedrock console; your account's available Anthropic models determine valid `claude.model` values. See the [Bedrock Mantle docs](https://docs.aws.amazon.com/bedrock/latest/userguide/bedrock-mantle.html) for regions and the [endpoints reference](https://docs.aws.amazon.com/bedrock/latest/userguide/endpoints.html).
 
 ##### OpenAI-compatible models (NVIDIA Nemotron)
 
-Bedrock Mantle also serves **non-Anthropic** models — such as [NVIDIA Nemotron Super 3 120B](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-nvidia-nemotron-super-3-120b.html) — over its **OpenAI-compatible Chat Completions** route (`/v1/chat/completions`) rather than the Anthropic Messages route. zsmith detects this from the model id and switches wire format automatically — still under `llm.provider=bedrock`, no extra provider:
+Bedrock Mantle also serves **non-Anthropic** models, such as [NVIDIA Nemotron Super 3 120B](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-nvidia-nemotron-super-3-120b.html), over its **OpenAI-compatible Chat Completions** route (`/v1/chat/completions`) rather than the Anthropic Messages route. zsmith detects this from the model id and switches wire format automatically, still under `llm.provider=bedrock`, with no extra provider:
 
 ```properties
 llm.provider=bedrock
@@ -420,7 +420,7 @@ bedrock.region=eu-west-1
 
 bedrock.api.key=bedrock-api-...
 
-# the id carries a '.', so it is used verbatim — no anthropic. prefix
+# the id carries a '.', so it is used verbatim, with no anthropic. prefix
 claude.model=nvidia.nemotron-super-3-120b
 ```
 
@@ -431,9 +431,9 @@ For such models zsmith derives:
 - **project header** → `openai-project` (this route **rejects** `anthropic-workspace-id`), sourced from `openai.project` or `bedrock.project.id`
 - **request/response** → translated to and from the OpenAI Chat Completions shape, so the Agent loop still sees Anthropic-shaped content blocks and `tool_use`
 
-> **One project id, both wires.** Set `bedrock.project.id` once and zsmith emits the header the active route accepts — `anthropic-workspace-id` for Anthropic models, `openai-project` for OpenAI-compatible ones like Nemotron — so flipping `claude.model` needs no other change. The wire-native keys `anthropic.workspace.id` / `openai.project` still override it when set. (Setting `anthropic.workspace.id` while running a Nemotron model is what triggers Bedrock's `The anthropic-workspace-id header is not supported for this API format` error — use `bedrock.project.id` instead.)
+> **One project id covers both wires.** Set `bedrock.project.id` once and zsmith emits the header the active route accepts (`anthropic-workspace-id` for Anthropic models, `openai-project` for OpenAI-compatible ones like Nemotron), so flipping `claude.model` needs no other change. The wire-native keys `anthropic.workspace.id` / `openai.project` still override it when set. (Setting `anthropic.workspace.id` while running a Nemotron model is what triggers Bedrock's `The anthropic-workspace-id header is not supported for this API format` error; use `bedrock.project.id` instead.)
 
-> **Region matters.** This model is offered only in specific regions, and the set changes over time — a region that works today may not be the one in your existing Bedrock config. If you get a "model isn't supported"/availability error, check the current regions on the [model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-nvidia-nemotron-super-3-120b.html) and set `bedrock.region` accordingly.
+> **Regions are limited and change over time.** This model is offered only in specific regions, and a region that works today may not be the one in your existing Bedrock config. If you get a "model isn't supported"/availability error, check the current regions on the [model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-nvidia-nemotron-super-3-120b.html) and set `bedrock.region` accordingly.
 
 #### OpenAI endpoint
 
@@ -451,7 +451,7 @@ openai.host=api.openai.com
 openai.port=
 ```
 
-The OpenAI client has no fallback model — unlike Claude's 529→fallback retry, OpenAI errors propagate directly.
+The OpenAI client has no fallback model. Unlike Claude's 529→fallback retry, OpenAI errors propagate directly.
 
 To point at a local Ollama server:
 
@@ -467,17 +467,17 @@ LM Studio (default port 1234), llama.cpp `--api`, and vLLM expose the same Chat 
 
 #### LightMetal (embedded local inference)
 
-[LightMetal](https://github.com/AdamBien/lightmetal) is a Java 25 GGUF runner that talks to Apple Silicon's Metal via the Foreign Function & Memory API. zsmith reaches it via the `UnaryOperator<String>` SPI (`lm.generation.boundary.LightMetalChat`), so the only compile-time dependency is `java.base` — drop `lightmetal.jar` on the classpath at runtime and the provider is **auto-selected**, overruling `llm.provider` whatever it is set to. The classpath is the explicit signal; no extra config is needed. The GGUF is loaded once on the first call and reused for every subsequent turn.
+[LightMetal](https://github.com/AdamBien/lightmetal) is a Java 25 GGUF runner that talks to Apple Silicon's Metal via the Foreign Function & Memory API. zsmith reaches it via the `UnaryOperator<String>` SPI (`lm.generation.boundary.LightMetalChat`), so the only compile-time dependency is `java.base`. Drop `lightmetal.jar` on the classpath at runtime and the provider is **auto-selected**, overruling `llm.provider` whatever it is set to. The classpath is the explicit signal; no extra config is needed. The GGUF is loaded once on the first call and reused for every subsequent turn.
 
 ```properties
-# optional — overrides lightmetal's own config
+# optional, overrides lightmetal's own config
 lightmetal.model=/abs/path/to/model.gguf
 
-# optional — defaults to 4096
+# optional, defaults to 4096
 lightmetal.max.tokens=4096
 ```
 
-`lightmetal.model` is **optional** in zsmith. When unset, zsmith omits `model` from the request payload entirely — lightmetal then sources it from its own eager-loaded `~/.lightmetal/app.properties` (or `-Dmodel=...`). So a user who already runs `lmprompt`/`lmserve` against a configured `~/.lightmetal/app.properties` needs zero zsmith-side model config. Set `lightmetal.model` in zsmith only when you want one agent to override the lightmetal-wide default.
+`lightmetal.model` is **optional** in zsmith. When unset, zsmith omits `model` from the request payload entirely; lightmetal then sources it from its own eager-loaded `~/.lightmetal/app.properties` (or `-Dmodel=...`). So a user who already runs `lmprompt`/`lmserve` against a configured `~/.lightmetal/app.properties` needs zero zsmith-side model config. Set `lightmetal.model` in zsmith only when you want one agent to override the lightmetal-wide default.
 
 LightMetal natively understands Anthropic-shaped `tools` and emits `tool_use` content blocks, so the Agent loop works the same as with Claude. Run agent scripts with `--enable-native-access=ALL-UNNAMED` so the FFM call into `libllama.dylib` is allowed:
 
@@ -485,7 +485,7 @@ LightMetal natively understands Anthropic-shaped `tools` and emits `tool_use` co
 #!/usr/bin/java --class-path=zbo/zsmith.jar:lightmetal.jar --enable-native-access=ALL-UNNAMED --source 25
 ```
 
-For benchmarking or remote inference you can also point the **Claude** client at LightMetal's HTTP server (`-serve` mode) — its `/v1/messages` endpoint is byte-compatible with Anthropic's:
+For benchmarking or remote inference you can also point the **Claude** client at LightMetal's HTTP server (`-serve` mode); its `/v1/messages` endpoint is byte-compatible with Anthropic's:
 
 ```properties
 llm.provider=claude
@@ -515,7 +515,7 @@ java -cp zbo/zsmith.jar src/test/java/airhacks/zsmith/SkillsExample.java
 
 ## Java Script Usage
 
-zsmith agents can run as standalone Java scripts using source-file mode — no build tool, no compilation step:
+zsmith agents can run as standalone Java scripts using source-file mode, with no build tool and no compilation step:
 
 ```bash
 ./src/test/java/airhacks/zsmith/userConfirmationExample
@@ -526,7 +526,7 @@ The script uses a shebang to reference `zbo/zsmith.jar` directly, so build first
 ```java
 #!/usr/bin/java --class-path=../../../../../zbo/zsmith.jar --source 25
 
-// Requires zbo/zsmith.jar — build first with: ./zb.sh
+// Requires zbo/zsmith.jar, build first with: ./zb.sh
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.logging.control.Log;
@@ -553,9 +553,9 @@ void main() {
 }
 ```
 
-No package declaration, no class wrapper — Java 25 implicit classes keep the script minimal. Install system-wide by copying the jar and script to a PATH directory, adjusting the `--class-path` accordingly.
+No package declaration, no class wrapper: Java 25 implicit classes keep the script minimal. Install system-wide by copying the jar and script to a PATH directory, adjusting the `--class-path` accordingly.
 
-A minimal calculator agent — see [`examples/calculator`](examples/calculator):
+A minimal calculator agent, see [`examples/calculator`](examples/calculator):
 
 ```java
 #!/usr/bin/java --class-path=../zsmith/zbo/zsmith.jar  --source 25
@@ -584,15 +584,15 @@ Run it directly:
 ./examples/calculator
 ```
 
-A file-driven variant — see [`examples/fileCalculator`](examples/fileCalculator) — asks the user for input and output paths, reads a math expression from the input file, evaluates it, and writes the numeric result to the output file. Its shebang also lists `lightmetal.jar` on the classpath:
+A file-driven variant ([`examples/fileCalculator`](examples/fileCalculator)) asks the user for input and output paths, reads a math expression from the input file, evaluates it, and writes the numeric result to the output file. Its shebang also lists `lightmetal.jar` on the classpath:
 
 ```java
 #!/usr/bin/java --class-path=../zsmith/zbo/zsmith.jar:../../lightmetal/zbo/lightmetal.jar --enable-native-access=ALL-UNNAMED --source 25
 ```
 
-The `../../lightmetal/zbo/lightmetal.jar` entry is **optional**. Drop it (and `--enable-native-access`) to run against Claude. Keep it to auto-select [LightMetal](#lightmetal-embedded-local-inference) for fully on-device inference — no other config change required, just set `lightmetal.model`.
+The `../../lightmetal/zbo/lightmetal.jar` entry is **optional**. Drop it (and `--enable-native-access`) to run against Claude. Keep it to auto-select [LightMetal](#lightmetal-embedded-local-inference) for fully on-device inference. No other config change is required, just set `lightmetal.model`.
 
-An inline-tool variant — see [`examples/currentDate`](examples/currentDate) — defines its tools directly in the script via `Tool.of(...)` instead of pulling them from the `Tools` enum:
+An inline-tool variant ([`examples/currentDate`](examples/currentDate)) defines its tools directly in the script via `Tool.of(...)` instead of pulling them from the `Tools` enum:
 
 ```java
 #!/usr/bin/java --class-path=../zsmith/zbo/zsmith.jar  --source 25
@@ -636,22 +636,22 @@ Run it directly:
 ./examples/currentDate
 ```
 
-`Tool.of(...)` is the inline counterpart to implementing the `Tool` interface — useful when a tool is small enough to live next to the agent that uses it. Two overloads are available:
+`Tool.of(...)` is the inline counterpart to implementing the `Tool` interface, useful when a tool is small enough to live next to the agent that uses it. Two overloads are available:
 
-- `Tool.of(name, description, schema, fn)` — full form with an explicit input schema (use `Tool.schema(...)` to declare parameters).
-- `Tool.of(name, description, fn)` — short form for parameter-less tools; the input schema defaults to `Tool.emptySchema()`.
+- `Tool.of(name, description, schema, fn)`: full form with an explicit input schema (use `Tool.schema(...)` to declare parameters).
+- `Tool.of(name, description, fn)`: short form for parameter-less tools; the input schema defaults to `Tool.emptySchema()`.
 
 ### JFR Configuration
 
-zsmith emits JDK Flight Recorder events for every agent turn, LLM API call, tool invocation, sub-agent dispatch, skill load, and memory access — all under the `zsmith` category.
+zsmith emits JDK Flight Recorder events for every agent turn, LLM API call, tool invocation, sub-agent dispatch, skill load, and memory access, all under the `zsmith` category.
 
-The simplest way to record them is configuration — no launcher flag, and it travels with the agent when the script is copied:
+The simplest way to record them is configuration: no launcher flag, and it travels with the agent when the script is copied:
 
 ```properties
 jfr.enabled=true
 ```
 
-The recording starts when an agent begins its first `chat`/`act` and is written to `~/.zsmith/[agentName]/recordings/[agentName]-[pid].jfr` when the JVM exits. Off by default: a recording is the whole run on disk. If the JVM is *already* recording — because you passed the flag below — zsmith leaves that recording alone rather than starting a second one.
+The recording starts when an agent begins its first `chat`/`act` and is written to `~/.zsmith/[agentName]/recordings/[agentName]-[pid].jfr` when the JVM exits. Off by default: a recording is the whole run on disk. If the JVM is *already* recording, because you passed the flag below, zsmith leaves that recording alone rather than starting a second one.
 
 Alternatively, add `-XX:StartFlightRecording` to the shebang. This starts earlier, so it also captures JVM startup:
 
@@ -676,7 +676,7 @@ For a focused recording, pass a custom `.jfc` file enabling only the `airhacks.z
 
 ### Correlation
 
-Every event of one `chat` or `act` invocation carries the same `runId`, so the recording can be grouped instead of guessed at — a tool call issued in parallel runs on its own virtual thread, which makes timestamps and thread ids useless for the job. `Turn` events also carry `iteration`, `depth`, and `parentRunId`, so a delegated run points back at the run that delegated to it and the sub-agent tree can be reconstructed. `Invocation` events carry the model's own `toolUseId`, which ties the event to the exact content block that requested it.
+Every event of one `chat` or `act` invocation carries the same `runId`, so the recording can be grouped instead of guessed at. A tool call issued in parallel runs on its own virtual thread, which makes timestamps and thread ids useless for the job. `Turn` events also carry `iteration`, `depth`, and `parentRunId`, so a delegated run points back at the run that delegated to it and the sub-agent tree can be reconstructed. `Invocation` events carry the model's own `toolUseId`, which ties the event to the exact content block that requested it.
 
 Filter by `runId` in JDK Mission Control to see one conversation end to end, or read it in code:
 
@@ -687,7 +687,7 @@ reports.values().stream()
         .forEach(report -> IO.println(report.summary()));
 ```
 
-`EventLog.replay(Path)` reads a finished recording whole, which is what you want for anything whose number gets compared against another run's. `EventLog.live()` consumes this JVM's events as they are flushed — start it *before* constructing the agent it should observe, since events committed before the stream is running are never delivered, and a flush interval sits between a commit and the stream seeing it.
+`EventLog.replay(Path)` reads a finished recording whole, which is what you want for anything whose number gets compared against another run's. `EventLog.live()` consumes this JVM's events as they are flushed. Start it *before* constructing the agent it should observe, since events committed before the stream is running are never delivered, and a flush interval sits between a commit and the stream seeing it.
 
 The events deliberately carry no content: no prompts, no tool inputs, no error messages. JFR interns strings per chunk, so verbatim payloads would neither deduplicate nor stay small, and a `.jfr` is an artifact people hand around with no redaction stage. What the stream gives you is which run to look at; what happened in it lives in the transcript.
 
@@ -700,11 +700,11 @@ Set `transcripts.enabled=true` to store each conversation under its `runId` in t
 transcripts.enabled=true
 ```
 
-Off by default — this writes whole conversations to disk. Records are browsable XHTML pages under `~/.zsmith/[agentName]/memory/transcripts/`, and readable in code through `TranscriptLog.forAgent(name).read(runId)`.
+Off by default: this writes whole conversations to disk. Records are browsable XHTML pages under `~/.zsmith/[agentName]/memory/transcripts/`, and readable in code through `TranscriptLog.forAgent(name).read(runId)`.
 
 ## Benchmarks
 
-The [`benchmarks/`](benchmarks/) directory holds executable agent benchmarks that score tool-calling behavior against seeded ground truth — no LLM judge — along orthogonal axes whose results can disagree. [`agentLoopBenchmark`](benchmarks/agentLoopBenchmark) drives an agent through a *pointer-chasing* chain (serial loop-following); [`agentParallelismBenchmark`](benchmarks/agentParallelismBenchmark) gives the agent independent lookups and measures whether it *batches* them into one turn or serializes them — the inverse axis; [`agentErrorRecoveryBenchmark`](benchmarks/agentErrorRecoveryBenchmark) injects transient tool failures into the chain and measures whether the agent *retries* or gives up — the robustness axis. Every run prints one normalized markdown table row (`Benchmark | Model | Size | Calls | Turns | Result`) that pastes directly into the results table in [`benchmarks/README.md`](benchmarks/README.md) — see there for mechanisms and sweep usage.
+The [`benchmarks/`](benchmarks/) directory holds executable agent benchmarks that score tool-calling behavior against seeded ground truth (no LLM judge) along orthogonal axes whose results can disagree. [`agentLoopBenchmark`](benchmarks/agentLoopBenchmark) drives an agent through a *pointer-chasing* chain (serial loop-following); [`agentParallelismBenchmark`](benchmarks/agentParallelismBenchmark) gives the agent independent lookups and measures whether it *batches* them into one turn or serializes them, the inverse axis; [`agentErrorRecoveryBenchmark`](benchmarks/agentErrorRecoveryBenchmark) injects transient tool failures into the chain and measures whether the agent *retries* or gives up, the robustness axis. Every run prints one normalized markdown table row (`Benchmark | Model | Size | Calls | Turns | Result`) that pastes directly into the results table in [`benchmarks/README.md`](benchmarks/README.md); see there for mechanisms and sweep usage.
 
 ## Skills
 
@@ -727,12 +727,12 @@ Keep it under 10 sentences total.
 
 Default skill resolution (each layer overrides the previous):
 
-1. `~/.zsmith/skills/` — global skills
-2. `~/.zsmith/[agentName]/skills/` — global agent-specific
-3. `./skills/` — local project skills
-4. `./[agentName]/skills/` — local agent-specific
+1. `~/.zsmith/skills/`: global skills
+2. `~/.zsmith/[agentName]/skills/`: global agent-specific
+3. `./skills/`: local project skills
+4. `./[agentName]/skills/`: local agent-specific
 
-Additional directories join the chain (lowest precedence, before layer 1) via the `skills.directories` configuration property — a comma-separated list, `~` expands to the user home. E.g. to reuse Claude Code skills:
+Additional directories join the chain (lowest precedence, before layer 1) via the `skills.directories` configuration property: a comma-separated list where `~` expands to the user home. E.g. to reuse Claude Code skills:
 
 ```properties
 # ~/.zsmith/app.properties
@@ -751,7 +751,7 @@ var agent = new Agent()
         .withSkills("path/to/skills");
 ```
 
-Preselected skills — load only the named skills from the default resolution chain:
+Preselected skills: load only the named skills from the default resolution chain:
 
 ```java
 var agent = new Agent("planner")
@@ -760,7 +760,7 @@ var agent = new Agent("planner")
 
 Skills not matching the given names are excluded from the catalog and from `load_skill`.
 
-Eager skills — inline the full skill content into the system prompt at construction time instead of exposing the `load_skill` tool. Use this when a skill is not optional context but the agent's job description (e.g. review rules the model must always apply). Names resolve through the same chain as `withSkillsNamed`, including `skills.directories`; `withEagerSkills(SkillStore store)` accepts a custom store:
+Eager skills: inline the full skill content into the system prompt at construction time instead of exposing the `load_skill` tool. Use this when a skill is not optional context but the agent's job description (e.g. review rules the model must always apply). Names resolve through the same chain as `withSkillsNamed`, including `skills.directories`; `withEagerSkills(SkillStore store)` accepts a custom store:
 
 ```java
 var agent = new Agent("reviewer", "You review Java code.")
@@ -769,7 +769,7 @@ var agent = new Agent("reviewer", "You review Java code.")
 
 ## Episodic Memory
 
-Agents store and recall information across conversations using `EpisodicMemoryStore`. Memories are classified by type — `user`, `feedback`, `project`, `reference` — and each one is persisted as its own XHTML page, so the memory folder is a browsable website: open `index.html` to read what an agent remembers, delete a page to make it forget.
+Agents store and recall information across conversations using `EpisodicMemoryStore`. Memories are classified by type (`user`, `feedback`, `project`, `reference`), and each one is persisted as its own XHTML page, so the memory folder is a browsable website: open `index.html` to read what an agent remembers, delete a page to make it forget.
 
 ```
 ~/.zsmith/planner/memory/
@@ -780,14 +780,14 @@ Agents store and recall information across conversations using `EpisodicMemorySt
     └── 2026-08-08-141902.html
 ```
 
-Agent memory — the type decides the scope. What the agent learns about the *user* is written to the shared `~/.zsmith/memory`, because it is true whatever the task; `project`, `reference` and `feedback` stay in `~/.zsmith/[agentName]/memory`. Both scopes are read as one, so a second agent — or a subagent — knows the same person without inheriting the first agent's notes:
+Agent memory: the type decides the scope. What the agent learns about the *user* is written to the shared `~/.zsmith/memory`, because it is true whatever the task; `project`, `reference` and `feedback` stay in `~/.zsmith/[agentName]/memory`. Both scopes are read as one, so a second agent, or a subagent, knows the same person without inheriting the first agent's notes:
 
 ```java
 var agent = new Agent("planner")
         .withEpisodicMemory();
 ```
 
-Single scope — every memory, whatever its type, in the shared database:
+Single scope: every memory, whatever its type, in the shared database:
 
 ```java
 var agent = new Agent("planner")
@@ -803,13 +803,13 @@ var agent = new Agent()
 
 Only `user` memories cross agents. An agent writing `project` notes straight to the shared database with `withSharedEpisodicMemory()` keeps them to itself.
 
-Storing a memory the store already holds — same text, same type — is skipped, so a model repeating itself across turns does not crowd out the injection caps (`zsmith.memory.injected.per_type`, `zsmith.memory.injected.max_total`, applied across both scopes together).
+Storing a memory the store already holds (same text, same type) is skipped, so a model repeating itself across turns does not crowd out the injection caps (`zsmith.memory.injected.per_type`, `zsmith.memory.injected.max_total`, applied across both scopes together).
 
 Writes are atomic and per memory, so an interrupted write costs at most the memory being written, and two agents sharing a folder do not overwrite each other. An `episodic-memory.json` from an earlier release is imported on first start and moved aside as `episodic-memory.json.migrated`; repeated statements collapse into one and user memories move to the shared scope on the way in.
 
 ## Improvement Log
 
-Opt-in. Adds a `report_improvement` tool with which the agent records where its own instructions fell short — the system prompt, a skill, or a tool description — as an `improvements` table next to its memories:
+Opt-in. Adds a `report_improvement` tool with which the agent records where its own instructions fell short (the system prompt, a skill, or a tool description) as an `improvements` table next to its memories:
 
 ```java
 var agent = new Agent("planner")
@@ -824,19 +824,19 @@ var agent = new Agent("planner")
 └── improvements/       # artifact, name, observation, trigger, suggestion
 ```
 
-A report is an incident, not a proposal. `observation` (what the instruction failed to say) and `trigger` (the input that exposed it) are required; `suggestion` is optional, because an agent never observes how a different instruction would have played out — it is a reliable witness and an unreliable designer of its own prompt. A report missing its trigger is refused, which is what keeps the table from filling with "the task went well". Reporting the same gap twice is skipped.
+A report records an incident rather than proposing a change. `observation` (what the instruction failed to say) and `trigger` (the input that exposed it) are required; `suggestion` is optional, because an agent never observes how a different instruction would have played out; it is a reliable witness and an unreliable designer of its own prompt. A report missing its trigger is refused, which is what keeps the table from filling with "the task went well". Reporting the same gap twice is skipped.
 
 Nothing written here reaches the agent. The log is read and applied by a human: an agent that edits its own `system.prompt` has no oversight, and a bad edit changes the behaviour that would justify the next one.
 
-Keep it off for agents in steady use — a tool definition ships with every request, and one that fires rarely still costs its description on every turn while diluting selection across the others.
+Keep it off for agents in steady use: a tool definition ships with every request, and one that fires rarely still costs its description on every turn while diluting selection across the others.
 
 ## Subagents
 
 Agents can delegate tasks to other agents via `withSubAgent()`. The child agent becomes a callable tool (`delegate_to_<name>`).
 
-By default, multiple `withSubAgent()` invocations run in parallel — but the **first successful run of each subagent is forced sequential** so that any `confirm`-level tool permission prompts appear cleanly one at a time on stdout/stdin instead of colliding across virtual threads. Once a subagent has completed once, a marker is written to `~/.zsmith/<subAgentName>/.first_run_completed` and subsequent runs fan out in parallel. Use `withSequentialSubAgent()` to opt out of parallelism entirely; delete the marker file to force another sequential warm-up.
+By default, multiple `withSubAgent()` invocations run in parallel, but the **first successful run of each subagent is forced sequential** so that any `confirm`-level tool permission prompts appear cleanly one at a time on stdout/stdin instead of colliding across virtual threads. Once a subagent has completed once, a marker is written to `~/.zsmith/<subAgentName>/.first_run_completed` and subsequent runs fan out in parallel. Use `withSequentialSubAgent()` to opt out of parallelism entirely; delete the marker file to force another sequential warm-up.
 
-Podcast transcription example — the coordinator asks for the transcript path, reads the file, delegates link verification, stores guests and links in memory, and copies the result to the clipboard:
+Podcast transcription example: the coordinator asks for the transcript path, reads the file, delegates link verification, stores guests and links in memory, and copies the result to the clipboard:
 
 ```java
 var linkChecker = new Agent("link_checker", """
@@ -917,8 +917,8 @@ var agent = new Agent("coordinator")
 | `SearchFilesTool` | `search_files` | Searches sandbox file contents for a regular expression; returns `path:line: text` matches like `grep -n`, optionally filtered by file suffix |
 | `EditFileTool` | `edit_file` | Replaces an exact, verbatim occurrence of one string with another in a sandboxed file |
 | `FindFilesTool` | `find_files` | Lists sandboxed files whose name or relative path matches a glob pattern |
-| `ReadAnyFileTool` | `read_any_file` | Reads a file from any location on the filesystem — **not sandboxed** |
-| `WriteAnyFileTool` | `write_any_file` | Writes a file at any absolute path, overwriting or appending — **not sandboxed** |
+| `ReadAnyFileTool` | `read_any_file` | Reads a file from any location on the filesystem (**not sandboxed**) |
+| `WriteAnyFileTool` | `write_any_file` | Writes a file at any absolute path, overwriting or appending (**not sandboxed**) |
 | `LinkCheckerTool` | `check_link` | Verifies a URL is reachable; returns status code, final URL after redirects, and content type |
 | `FetchUrlTool` | `fetch_url` | Fetches a URL with a browser User-Agent and returns status, content type, and up to 20000 chars of the body |
 | `UserConfirmationTool` | `user_confirmation` | Asks the user a yes/no question and returns the answer |
