@@ -1,7 +1,10 @@
 package airhacks.zsmith.diagnostics.entity;
 
 import java.time.Duration;
+import java.time.Instant;
+import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 
 /// One run's events in order, which is the half of a recording the per-run fold discards.
 ///
@@ -23,6 +26,15 @@ public record Timeline(String runId, String agent, String parentRunId, int depth
             return Duration.ZERO;
         }
         return Duration.between(this.calls.getFirst().started(), this.calls.getLast().ended());
+    }
+
+    /// What the run was doing between two of its own LLM calls — the longest tool call that fits
+    /// entirely inside the window. The longest rather than the first because a turn can issue
+    /// several, and the one that held the window open is the one worth naming.
+    public Optional<ToolCall> blockedOn(Instant from, Instant to) {
+        return this.toolCalls.stream()
+                .filter(call -> call.fills(from, to))
+                .max(Comparator.comparing(ToolCall::took));
     }
 
     /// A run nobody delegated to. Reported first, because the sub-agent runs only make sense

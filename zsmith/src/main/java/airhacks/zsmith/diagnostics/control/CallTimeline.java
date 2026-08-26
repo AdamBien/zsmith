@@ -113,13 +113,13 @@ public class CallTimeline implements Consumer<RecordedEvent> {
         }
 
         synchronized void addToolCall(RecordedEvent event) {
-            this.toolCalls.add(new ToolCall(this.runId, number(event, "iteration"),
-                    text(event, "toolName"), number(event, "resultSize")));
+            this.toolCalls.add(new ToolCall(this.runId, event.getStartTime(), event.getEndTime(),
+                    number(event, "iteration"), text(event, "toolName"), number(event, "resultSize")));
         }
 
         synchronized Timeline freeze() {
             this.calls.sort(Comparator.comparing(Call::started));
-            this.toolCalls.sort(Comparator.comparingInt(ToolCall::iteration));
+            this.toolCalls.sort(Comparator.comparing(ToolCall::started));
             return new Timeline(this.runId, this.agent, this.parentRunId, this.depth,
                     this.calls, this.toolCalls, this.toolUses, this.turnsWithTools);
         }

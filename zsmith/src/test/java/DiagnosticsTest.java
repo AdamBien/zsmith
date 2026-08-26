@@ -29,6 +29,7 @@ void main() {
     reportsAReCreatedPrefix();
     neverReportsAFirstCallAsExpired();
     reportsAnIdleGap();
+    namesWhatFilledTheGap();
     reportsALargeResultWithTheTurnsThatCarriedIt();
     ignoresALargeResultNoTurnFollowed();
     reportsSerializedToolCalls();
@@ -78,13 +79,41 @@ void reportsAnIdleGap() {
     var gap = of("idle-gap", findings);
     if (!gap.evidence().contains("16m 00s"))
         throw new AssertionError("R2.2 — the gap must be measured, not just named: " + gap);
+    if (!gap.evidence().contains("idle"))
+        throw new AssertionError("R2.2 — a gap no tool covers is the run doing nothing: " + gap);
+}
+
+// R2.2 — a tool that ran the length of the gap names the cause: an unanswered question and a
+// sub-agent still working are the same gap and not the same problem.
+void namesWhatFilledTheGap() {
+    var waiting = diagnose(
+            timeline("parent", 0, calls(
+                    call(0, NOON, 20_000, 0),
+                    call(1, AFTER_THE_CACHE_DIED, 0, 68_789)),
+                    List.of(toolCall(0, "user_question", 12, NOON.plusSeconds(2), 16 * 60)), 0, 0),
+            report("parent", 2, 1));
+    if (!of("idle-gap", waiting).evidence().contains("waiting on user_question"))
+        throw new AssertionError("R2.2 — expected the blocking tool named: " + of("idle-gap", waiting));
+    if (!of("cache-expired", waiting).evidence().contains("waiting on user_question"))
+        throw new AssertionError("R2.2 — the expiry should name its cause too: " + of("cache-expired", waiting));
+
+    // several tools in the window: the one that held it open is the one worth naming
+    var longest = diagnose(
+            timeline("parent", 0, calls(
+                    call(0, NOON, 20_000, 0),
+                    call(1, AFTER_THE_CACHE_DIED, 0, 68_789)),
+                    List.of(toolCall(0, "read_any_file", 66_798, NOON.plusSeconds(2), 3),
+                            toolCall(0, "user_question", 12, NOON.plusSeconds(6), 15 * 60)), 0, 0),
+            report("parent", 2, 2));
+    if (!of("idle-gap", longest).evidence().contains("waiting on user_question"))
+        throw new AssertionError("R2.2 — the longest tool in the window wins: " + of("idle-gap", longest));
 }
 
 // R2.4 — a large result costs its size times the turns that carried it, so both are reported.
 void reportsALargeResultWithTheTurnsThatCarriedIt() {
     var findings = diagnose(
             timeline("parent", 0, calls(call(0, NOON, 10, 0)),
-                    List.of(new ToolCall("parent", 0, "recall_memory", 54_998)), 0, 0),
+                    List.of(toolCall(0, "recall_memory", 54_998, NOON, 1)), 0, 0),
             report("parent", 18, 1));
     var oversized = of("oversized-tool-result", findings);
     if (!oversized.evidence().contains("54998") || !oversized.evidence().contains("17"))
@@ -95,7 +124,7 @@ void reportsALargeResultWithTheTurnsThatCarriedIt() {
 void ignoresALargeResultNoTurnFollowed() {
     var findings = diagnose(
             timeline("parent", 0, calls(call(0, NOON, 10, 0)),
-                    List.of(new ToolCall("parent", 17, "read_any_file", 66_798)), 0, 0),
+                    List.of(toolCall(17, "read_any_file", 66_798, NOON, 1)), 0, 0),
             report("parent", 18, 1));
     if (findings.stream().anyMatch(finding -> "oversized-tool-result".equals(finding.kind())))
         throw new AssertionError("R2.4 — a result the final turn fetched is carried by nothing: " + findings);
@@ -188,6 +217,10 @@ Timeline timeline(String runId, int depth, List<Call> calls, List<ToolCall> tool
 
 List<Call> calls(Call... calls) {
     return List.of(calls);
+}
+
+ToolCall toolCall(int iteration, String toolName, int resultSize, Instant started, int seconds) {
+    return new ToolCall("run", started, started.plusSeconds(seconds), iteration, toolName, resultSize);
 }
 
 Call call(int iteration, Instant started, int cacheRead, int cacheCreation) {

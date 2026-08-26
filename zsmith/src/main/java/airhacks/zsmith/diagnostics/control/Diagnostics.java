@@ -86,19 +86,31 @@ public interface Diagnostics {
             var idle = call.since(calls.get(index - 1));
             if (idle.compareTo(CACHE_TTL) > 0) {
                 findings.add(Finding.note(timeline.runId(), "idle-gap",
-                        "the run stood still longer than the prompt cache lives",
-                        "%s between turn %d and turn %d, cache TTL is %s".formatted(
-                                humanized(idle), calls.get(index - 1).iteration(), call.iteration(),
+                        "the run was blocked longer than the prompt cache lives",
+                        "%s %s between turn %d and turn %d, cache TTL is %s".formatted(
+                                humanized(idle), blamed(timeline, calls.get(index - 1), call),
+                                calls.get(index - 1).iteration(), call.iteration(),
                                 humanized(CACHE_TTL))));
             }
             if (expired(call)) {
                 findings.add(Finding.warning(timeline.runId(), "cache-expired",
                         "the prefix was re-created at write price instead of read from cache",
-                        "turn %d read 0 cached tokens and wrote %d after %s idle".formatted(
-                                call.iteration(), call.cacheCreation(), humanized(idle))));
+                        "turn %d read 0 cached tokens and wrote %d after %s %s".formatted(
+                                call.iteration(), call.cacheCreation(), humanized(idle),
+                                blamed(timeline, calls.get(index - 1), call))));
             }
         }
         return findings;
+    }
+
+    /// What held the window open, when the recording says. A tool that ran the length of the gap
+    /// names the cause outright — a question nobody answered, or a sub-agent still working, which
+    /// are the same gap and not at all the same problem. Falls back to the bare gap when no tool
+    /// covers it, because then the run really was doing nothing.
+    static String blamed(Timeline timeline, Call previous, Call call) {
+        return timeline.blockedOn(previous.ended(), call.started())
+                .map(tool -> "waiting on %s".formatted(tool.toolName()))
+                .orElse("idle");
     }
 
     static boolean expired(Call call) {
