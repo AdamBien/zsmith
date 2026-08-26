@@ -4,6 +4,7 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Optional;
 
@@ -41,9 +42,10 @@ public interface Diagnostics {
     /// once and never carried.
     int CARRIED_TURNS = 2;
 
-    /// Below this share of tool calls issued in one turn, the model is serializing work it could
-    /// have batched — each extra turn is a whole round trip through the model.
-    double WELL_BATCHED = 0.5;
+    /// Below this many tool calls per turn, the model is asking for work one item at a time that
+    /// it could have asked for together — and each extra turn is a whole round trip through the
+    /// model, paid for by re-sending the entire conversation.
+    double WELL_BATCHED = 1.5;
 
     /// Below this many tool calls there is nothing to say about batching: a single call cannot be
     /// batched with anything, and a handful spread over a conversation is a workflow rather than a
@@ -125,14 +127,16 @@ public interface Diagnostics {
         if (timeline.toolUses() < BATCHABLE_TOOL_USES) {
             return Optional.empty();
         }
-        var evidence = "%d of %d tool calls issued in one turn".formatted(
-                timeline.parallelToolUses(), timeline.toolUses());
-        if (timeline.batchedShare() >= WELL_BATCHED) {
+        // ROOT rather than the default: a finding is compared against another run's, and a
+        // decimal separator that follows whoever is running the analyzer makes that harder.
+        var evidence = String.format(Locale.ROOT, "%d tool calls over %d turns, %.1f per round trip",
+                timeline.toolUses(), timeline.turnsWithTools(), timeline.toolsPerTurn());
+        if (timeline.toolsPerTurn() >= WELL_BATCHED) {
             return Optional.of(Finding.pass(timeline.runId(), "batching",
-                    "independent tool calls were batched rather than serialized", evidence));
+                    "tool calls shared their turns rather than costing a round trip each", evidence));
         }
         return Optional.of(Finding.note(timeline.runId(), "batching",
-                "tool calls were serialized where they could have shared a turn", evidence));
+                "tool calls were asked for one at a time, a round trip each", evidence));
     }
 
     static Finding retries(String runId, RunReport report) {

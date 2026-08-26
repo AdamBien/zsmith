@@ -81,7 +81,7 @@ public class CallTimeline implements Consumer<RecordedEvent> {
         private String parentRunId = "";
         private int depth;
         private int toolUses;
-        private int parallelToolUses;
+        private int turnsWithTools;
 
         Trace(String runId) {
             this.runId = runId;
@@ -99,8 +99,11 @@ public class CallTimeline implements Consumer<RecordedEvent> {
                 this.parentRunId = text(event, "parentRunId");
             }
             this.depth = Math.max(this.depth, number(event, "depth"));
-            this.toolUses += number(event, "toolUseCount");
-            this.parallelToolUses += number(event, "parallelToolCount");
+            var toolUses = number(event, "toolUseCount");
+            this.toolUses += toolUses;
+            if (toolUses > 0) {
+                this.turnsWithTools++;
+            }
         }
 
         synchronized void addCall(RecordedEvent event) {
@@ -118,7 +121,7 @@ public class CallTimeline implements Consumer<RecordedEvent> {
             this.calls.sort(Comparator.comparing(Call::started));
             this.toolCalls.sort(Comparator.comparingInt(ToolCall::iteration));
             return new Timeline(this.runId, this.agent, this.parentRunId, this.depth,
-                    this.calls, this.toolCalls, this.toolUses, this.parallelToolUses);
+                    this.calls, this.toolCalls, this.toolUses, this.turnsWithTools);
         }
     }
 

@@ -707,7 +707,7 @@ Every rule is arithmetic over recorded fields — no model reads the recording. 
 | `cache-expired` | A call read nothing from cache and re-created a significant prefix at write price. A run's *first* call never counts: it reads nothing from cache by definition, which is what separates a real expiry from a sub-agent starting cold. |
 | `idle-gap` | The run's own calls were spaced further apart than the prompt cache lives — the cause of which `cache-expired` is the effect. |
 | `oversized-tool-result` | A large result was appended to the conversation and re-sent on every turn after it. Reported with the turns that carried it, because that, not the one call, is what it cost. |
-| `batching` | The share of tool calls the model issued in one turn rather than one at a time. A serialized independent call is a whole extra round trip. |
+| `batching` | How many tool calls the run got out of each turn that asked for any. Counted per turn, never by how the tools executed — concurrency is a property `Tool.parallel()` declares, so a run using only sequential tools has serialized nothing. |
 | `retries`, `tool-failures` | Straight from the run's report, keyed by what went wrong. |
 | `incomplete` | The run never reached a terminal turn. |
 | `subagent-cost` | What a delegated run spent, reported against the child and never added to the parent. |

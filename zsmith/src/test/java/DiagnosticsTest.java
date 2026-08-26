@@ -101,19 +101,28 @@ void ignoresALargeResultNoTurnFollowed() {
         throw new AssertionError("R2.4 — a result the final turn fetched is carried by nothing: " + findings);
 }
 
-// R2.5 — the share of tool calls issued in one turn rather than one at a time.
+// R2.5 — tool calls per turn that asked for any, which is what a round trip costs. Counted per
+// turn and never by how the tools were executed: concurrency is a property the tool declares, so
+// a run using only sequential tools has serialized nothing.
 void reportsSerializedToolCalls() {
     var serial = of("batching", diagnose(
-            timeline("parent", 0, calls(call(0, NOON, 10, 0)), List.of(), 23, 4),
-            report("parent", 18, 23)));
-    if (serial.severity() != Finding.Severity.NOTE || !serial.evidence().contains("4 of 23"))
-        throw new AssertionError("R2.5 — expected serialized tool use reported with its share: " + serial);
+            timeline("parent", 0, calls(call(0, NOON, 10, 0)), List.of(), 20, 18),
+            report("parent", 18, 20)));
+    if (serial.severity() != Finding.Severity.NOTE || !serial.evidence().contains("1.1 per round trip"))
+        throw new AssertionError("R2.5 — one tool per turn is a round trip each: " + serial);
 
     var batched = of("batching", diagnose(
-            timeline("child", 1, calls(call(0, NOON, 10, 0)), List.of(), 80, 79),
+            timeline("child", 1, calls(call(0, NOON, 10, 0)), List.of(), 80, 9),
             report("child", 9, 80)));
     if (batched.severity() != Finding.Severity.PASS)
-        throw new AssertionError("R2.5 — 79 of 80 batched is healthy: " + batched);
+        throw new AssertionError("R2.5 — 80 tool calls over 9 turns is healthy: " + batched);
+
+    // three tools asked for in one turn cost one round trip, whatever order they then ran in
+    var oneTurn = of("batching", diagnose(
+            timeline("parent", 0, calls(call(0, NOON, 10, 0)), List.of(), 9, 1),
+            report("parent", 4, 9)));
+    if (oneTurn.severity() != Finding.Severity.PASS)
+        throw new AssertionError("R2.5 — tools sharing a turn are batched however they execute: " + oneTurn);
 }
 
 // R1.2 — a run that was checked and found healthy says so rather than saying nothing.
@@ -172,9 +181,9 @@ Finding of(String kind, List<Finding> findings) {
 }
 
 Timeline timeline(String runId, int depth, List<Call> calls, List<ToolCall> toolCalls,
-        int toolUses, int parallelToolUses) {
+        int toolUses, int turnsWithTools) {
     return new Timeline(runId, runId + "-agent", depth == 0 ? "" : "parent", depth,
-            calls, toolCalls, toolUses, parallelToolUses);
+            calls, toolCalls, toolUses, turnsWithTools);
 }
 
 List<Call> calls(Call... calls) {

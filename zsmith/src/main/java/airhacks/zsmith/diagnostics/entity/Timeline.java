@@ -9,7 +9,7 @@ import java.util.List;
 /// child's calls into its parent would leave neither sequence the shape of anything that happened.
 /// The same reasoning the running tally is built on.
 public record Timeline(String runId, String agent, String parentRunId, int depth,
-        List<Call> calls, List<ToolCall> toolCalls, int toolUses, int parallelToolUses) {
+        List<Call> calls, List<ToolCall> toolCalls, int toolUses, int turnsWithTools) {
 
     public Timeline {
         calls = List.copyOf(calls);
@@ -31,9 +31,13 @@ public record Timeline(String runId, String agent, String parentRunId, int depth
         return this.depth == 0;
     }
 
-    /// The share of tool calls the model asked for in one turn rather than one at a time.
-    /// Undefined without tool use, which the callers check before asking.
-    public double batchedShare() {
-        return this.toolUses == 0 ? 1 : (double) this.parallelToolUses / this.toolUses;
+    /// Tool calls per turn that asked for any — how many the model got out of one round trip.
+    ///
+    /// Counted per turn rather than by how they were executed: whether two tools ran concurrently
+    /// is decided by the tools themselves, and a run using only sequential ones is not a run that
+    /// serialized anything. What a turn costs is the round trip through the model, so a turn that
+    /// asked for eight tools cost the same as one that asked for one.
+    public double toolsPerTurn() {
+        return this.turnsWithTools == 0 ? 0 : (double) this.toolUses / this.turnsWithTools;
     }
 }

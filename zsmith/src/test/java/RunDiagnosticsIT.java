@@ -38,8 +38,15 @@ Path write(Path file) throws Exception {
         recorded.enable(ClaudeAPICallEvent.NAME);
         recorded.start();
 
-        // a parent that serialized its tool use, and a child it delegated to that batched
-        turn("parent", "", 0, 7, 1);
+        // a parent asking for one tool per turn, and a child it delegated to that asked for eight
+        // in a single turn — the same tool count, one round trip against seven
+        turn("parent", "", 0, 1, 1);
+        turn("parent", "", 0, 1, 1);
+        turn("parent", "", 0, 1, 1);
+        turn("parent", "", 0, 1, 1);
+        turn("parent", "", 0, 1, 1);
+        turn("parent", "", 0, 1, 1);
+        turn("parent", "", 0, 1, 1);
         turn("child", "parent", 1, 8, 8);
         claudeCall("parent");
         claudeCall("child");
@@ -62,7 +69,7 @@ void keepsRunsApart(List<Finding> findings) {
         throw new AssertionError("R1.1 — each run is judged on its own tool use, got: " + batching);
     if (batching.getFirst().severity() != Finding.Severity.NOTE
             || batching.getLast().severity() != Finding.Severity.PASS)
-        throw new AssertionError("R1.1 — 1 of 7 batched and 8 of 8 are not the same verdict: " + batching);
+        throw new AssertionError("R1.1 — seven round trips and one are not the same verdict: " + batching);
 }
 
 // R1.4 — a Claude call event carries no `agentName`, and a turn event no token counts; every rule
