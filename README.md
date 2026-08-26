@@ -691,6 +691,48 @@ reports.values().stream()
 
 The events deliberately carry no content: no prompts, no tool inputs, no error messages. JFR interns strings per chunk, so verbatim payloads would neither deduplicate nor stay small, and a `.jfr` is an artifact people hand around with no redaction stage. What the stream gives you is which run to look at; what happened in it lives in the transcript.
 
+### Diagnosing a Run
+
+`EventLog.replay` says what a run cost. `RunDiagnostics` says whether that was avoidable:
+
+```java
+RunDiagnostics.diagnose(Path.of("airhacksfm-93248.jfr"))
+        .forEach(finding -> IO.println(finding.line()));
+```
+
+Every rule is arithmetic over recorded fields — no model reads the recording. The findings:
+
+| Finding | What it means |
+|---------|---------------|
+| `cache-expired` | A call read nothing from cache and re-created a significant prefix at write price. A run's *first* call never counts: it reads nothing from cache by definition, which is what separates a real expiry from a sub-agent starting cold. |
+| `idle-gap` | The run's own calls were spaced further apart than the prompt cache lives — the cause of which `cache-expired` is the effect. |
+| `oversized-tool-result` | A large result was appended to the conversation and re-sent on every turn after it. Reported with the turns that carried it, because that, not the one call, is what it cost. |
+| `batching` | The share of tool calls the model issued in one turn rather than one at a time. A serialized independent call is a whole extra round trip. |
+| `retries`, `tool-failures` | Straight from the run's report, keyed by what went wrong. |
+| `incomplete` | The run never reached a terminal turn. |
+| `subagent-cost` | What a delegated run spent, reported against the child and never added to the parent. |
+
+Findings are graded `WARNING`, `NOTE` or `PASS`. A healthy run reports its passes rather than
+staying silent — an empty report cannot be told apart from an unchecked one. Each finding carries
+the measurements its verdict rests on, so it can be argued with rather than believed.
+
+[`runAnalyzer`](runAnalyzer), at the repository root beside `zsinstall`, prints the whole thing for a `.jfr`:
+
+```sh
+./runAnalyzer ~/.zsmith/airhacksfm/recordings/airhacksfm-93248.jfr
+```
+
+```
+run d595382d-12cf-464a-8ddf-0b5fc98ec35f
+  WARNING cache-expired          the prefix was re-created at write price instead of read from cache — turn 6 read 0 cached tokens and wrote 68789 after 16m 23s idle
+  NOTE    idle-gap               the run stood still longer than the prompt cache lives — 16m 23s between turn 5 and turn 6, cache TTL is 5m 00s
+  NOTE    oversized-tool-result  a large tool result rode the conversation for the rest of the run — recall_memory returned 54998 bytes at turn 0, re-sent on 17 further turns
+  PASS    retries                every API call succeeded on its first attempt — 18 calls, 0 retries
+```
+
+What a run *should* have done in any sense a threshold cannot express stays out: that needs the
+conversation, which lives in the transcript stored under the same `runId`.
+
 ### Transcripts
 
 Set `transcripts.enabled=true` to store each conversation under its `runId` in the agent's own database, next to its memories and improvement backlog:

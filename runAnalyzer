@@ -1,0 +1,25 @@
+#!/usr/bin/java --class-path=zsmith/zbo/zsmith.jar --source 25
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import airhacks.zsmith.diagnostics.boundary.RunDiagnostics;
+
+/// Scores a finished recording and prints what was avoidable about the runs in it.
+///
+/// Not an agent: every finding is arithmetic over the recorded event stream, so there is nothing
+/// here for a model to decide — which is why it sits here beside `zsinstall` rather than under
+/// `examples`, where everything is an agent. Run it from the repository root, against any
+/// `~/.zsmith/[agent]/recordings/*.jfr` written with `jfr.enabled=true`.
+void main(String... args) {
+    if (args.length != 1) {
+        IO.println("usage: ./runAnalyzer <recording.jfr>");
+        System.exit(1);
+    }
+    var recording = Path.of(args[0]);
+    if (!Files.isReadable(recording)) {
+        IO.println("cannot read " + recording);
+        System.exit(1);
+    }
+    IO.println(RunDiagnostics.report(recording));
+}
