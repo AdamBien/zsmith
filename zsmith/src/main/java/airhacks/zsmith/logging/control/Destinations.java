@@ -16,7 +16,7 @@ import airhacks.zsmith.logging.entity.Sink;
 ///
 /// Synchronized because opening is a check followed by several steps before anything is writing,
 /// and because the channels themselves arrive from tool threads while the loop is still emitting.
-public class Diagnostics {
+public class Destinations {
 
     static final String LOGS_DIRECTORY = "logs";
 
@@ -27,7 +27,7 @@ public class Diagnostics {
     private static PrintWriter file;
     private static Sink sink = Sink.CONSOLE;
 
-    private Diagnostics() {
+    private Destinations() {
     }
 
     public static synchronized Optional<Path> direct(String agentName) {

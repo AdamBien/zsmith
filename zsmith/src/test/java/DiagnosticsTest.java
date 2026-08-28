@@ -30,8 +30,10 @@ void main() {
     neverReportsAFirstCallAsExpired();
     reportsAnIdleGap();
     namesWhatFilledTheGap();
-    reportsALargeResultWithTheTurnsThatCarriedIt();
+    reportsWhatEachToolCarried();
+    ranksByWhatWasCarriedNotByResultSize();
     ignoresALargeResultNoTurnFollowed();
+    ignoresALargeResultInAShortRun();
     reportsSerializedToolCalls();
     passesAHealthyRun();
     reportsRetriesAndFailures();
@@ -109,25 +111,57 @@ void namesWhatFilledTheGap() {
         throw new AssertionError("R2.2 — the longest tool in the window wins: " + of("idle-gap", longest));
 }
 
-// R2.4 — a large result costs its size times the turns that carried it, so both are reported.
-void reportsALargeResultWithTheTurnsThatCarriedIt() {
+// R2.4 — what a tool cost is its bytes times the turns that carried them, summed per tool.
+void reportsWhatEachToolCarried() {
     var findings = diagnose(
             timeline("parent", 0, calls(call(0, NOON, 10, 0)),
-                    List.of(toolCall(0, "recall_memory", 54_998, NOON, 1)), 0, 0),
-            report("parent", 18, 1));
-    var oversized = of("oversized-tool-result", findings);
-    if (!oversized.evidence().contains("54998") || !oversized.evidence().contains("17"))
-        throw new AssertionError("R2.4 — expected the size and the 17 turns that carried it: " + oversized);
+                    List.of(toolCall(0, "recall_memory", 54_998, NOON, 1),
+                            toolCall(0, "recall_memory", 26_195, NOON, 1)), 0, 0),
+            report("parent", 18, 2));
+    var carried = of("context-carried", findings);
+    // 54998*17 + 26195*17 = 1_380_281 bytes, 1347 KB
+    if (!carried.summary().contains("recall_memory carried 1347 KB"))
+        throw new AssertionError("R2.4 — expected both calls summed into one finding: " + carried);
+    if (!carried.evidence().contains("2 calls totalling 81193 bytes"))
+        throw new AssertionError("R2.4 — the evidence must show what it summed: " + carried);
+    if (findings.stream().filter(finding -> "context-carried".equals(finding.kind())).count() != 1)
+        throw new AssertionError("R2.4 — one tool is one finding, not one per call: " + findings);
 }
 
-// R2.4 — a result nothing followed was read once and is not worth reporting.
+// R2.4 — the largest single result is routinely not the largest cost, so the ranking is by carry.
+void ranksByWhatWasCarriedNotByResultSize() {
+    var findings = diagnose(
+            timeline("parent", 0, calls(call(0, NOON, 10, 0)),
+                    List.of(toolCall(0, "recall_memory", 54_998, NOON, 1),
+                            toolCall(0, "recall_memory", 26_195, NOON, 1),
+                            toolCall(3, "read_any_file", 66_798, NOON, 1)), 0, 0),
+            report("parent", 18, 3));
+    var carried = findings.stream().filter(finding -> "context-carried".equals(finding.kind())).toList();
+    // read_any_file has the biggest single result (66798) but recall_memory carries more overall
+    if (!carried.getFirst().summary().startsWith("recall_memory"))
+        throw new AssertionError("R2.4 — the dearest tool comes first, not the biggest result: " + carried);
+    if (!carried.getLast().summary().startsWith("read_any_file"))
+        throw new AssertionError("R2.4 — expected read_any_file ranked second: " + carried);
+}
+
+// R2.4 — a result nothing followed was read once and carried nothing.
 void ignoresALargeResultNoTurnFollowed() {
     var findings = diagnose(
             timeline("parent", 0, calls(call(0, NOON, 10, 0)),
                     List.of(toolCall(17, "read_any_file", 66_798, NOON, 1)), 0, 0),
             report("parent", 18, 1));
-    if (findings.stream().anyMatch(finding -> "oversized-tool-result".equals(finding.kind())))
+    if (findings.stream().anyMatch(finding -> "context-carried".equals(finding.kind())))
         throw new AssertionError("R2.4 — a result the final turn fetched is carried by nothing: " + findings);
+}
+
+// R2.4 — the same result is dear in a long run and cheap in a short one; the gate is on the carry.
+void ignoresALargeResultInAShortRun() {
+    var findings = diagnose(
+            timeline("child", 1, calls(call(0, NOON, 10, 0)),
+                    List.of(toolCall(0, "read_any_file", 66_798, NOON, 1)), 0, 0),
+            report("child", 2, 1));
+    if (findings.stream().anyMatch(finding -> "context-carried".equals(finding.kind())))
+        throw new AssertionError("R2.4 — 65 KB carried by a two-turn run is not what costs: " + findings);
 }
 
 // R2.5 — tool calls per turn that asked for any, which is what a round trip costs. Counted per

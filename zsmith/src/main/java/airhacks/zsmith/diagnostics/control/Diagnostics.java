@@ -11,7 +11,6 @@ import java.util.Optional;
 import airhacks.zsmith.diagnostics.entity.Call;
 import airhacks.zsmith.diagnostics.entity.Finding;
 import airhacks.zsmith.diagnostics.entity.Timeline;
-import airhacks.zsmith.diagnostics.entity.ToolCall;
 import airhacks.zsmith.telemetry.entity.RunReport;
 
 /// Turns what a run cost into whether that was avoidable.
@@ -34,13 +33,12 @@ public interface Diagnostics {
     /// cache writing is the ordinary cost of a conversation growing.
     int SIGNIFICANT_CACHE_CREATION = 4_096;
 
-    /// A tool result larger than this is worth naming, because it does not cost once: it is
-    /// appended to the conversation and re-sent on every turn that follows.
-    int OVERSIZED_RESULT = 16_384;
-
-    /// A large result only matters if turns followed it. One fetched by the final turn is read
-    /// once and never carried.
-    int CARRIED_TURNS = 2;
+    /// Below this many bytes re-sent across a run, what a tool left in the conversation is not
+    /// what is costing anything. Measured on the carry rather than on one result, because those
+    /// rank differently: a 67 KB read in a two-turn run costs a fraction of three 27 KB recalls in
+    /// an eighteen-turn one, and thresholding on the result would report the cheap one and hide
+    /// the dear one.
+    long CARRIED_BYTES = 128 * 1024;
 
     /// Below this many tool calls per turn, the model is asking for work one item at a time that
     /// it could have asked for together — and each extra turn is a whole round trip through the
@@ -62,7 +60,7 @@ public interface Diagnostics {
     static List<Finding> forRun(Timeline timeline, RunReport report) {
         var findings = new ArrayList<Finding>();
         findings.addAll(cacheFindings(timeline));
-        findings.addAll(oversizedResults(timeline, report));
+        findings.addAll(carriedContext(timeline, report));
         batching(timeline).ifPresent(findings::add);
         if (report != null) {
             findings.add(retries(timeline.runId(), report));
@@ -117,22 +115,18 @@ public interface Diagnostics {
         return call.readNothingFromCache() && call.cacheCreation() >= SIGNIFICANT_CACHE_CREATION;
     }
 
-    /// Charged by what a result costs over the rest of the run rather than by its own size, since
-    /// that is what actually leaves the conversation: bytes multiplied by the turns that carry it.
-    static List<Finding> oversizedResults(Timeline timeline, RunReport report) {
+    /// Charged by what a tool left in the conversation over the rest of the run rather than by the
+    /// size of any one result, since that is what actually leaves the machine: bytes multiplied by
+    /// the turns that carry them, summed per tool and dearest first.
+    static List<Finding> carriedContext(Timeline timeline, RunReport report) {
         var turns = report == null ? 0 : report.turns();
-        return timeline.toolCalls().stream()
-                .filter(call -> call.resultSize() >= OVERSIZED_RESULT)
-                .filter(call -> call.turnsCarried(turns) >= CARRIED_TURNS)
-                .map(call -> Finding.note(timeline.runId(), "oversized-tool-result",
-                        "a large tool result rode the conversation for the rest of the run",
-                        described(call, turns)))
+        return timeline.carried(turns).stream()
+                .filter(carried -> carried.carriedBytes() >= CARRIED_BYTES)
+                .map(carried -> Finding.note(timeline.runId(), "context-carried",
+                        "%s carried %d KB through the run".formatted(
+                                carried.toolName(), carried.carriedKilobytes()),
+                        carried.describe()))
                 .toList();
-    }
-
-    static String described(ToolCall call, int turns) {
-        return "%s returned %d bytes at turn %d, re-sent on %d further turns".formatted(
-                call.toolName(), call.resultSize(), call.iteration(), call.turnsCarried(turns));
     }
 
     static Optional<Finding> batching(Timeline timeline) {

@@ -5,6 +5,7 @@ import java.time.Instant;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /// One run's events in order, which is the half of a recording the per-run fold discards.
 ///
@@ -26,6 +27,19 @@ public record Timeline(String runId, String agent, String parentRunId, int depth
             return Duration.ZERO;
         }
         return Duration.between(this.calls.getFirst().started(), this.calls.getLast().ended());
+    }
+
+    /// What each tool left in the conversation, dearest first. Grouped by tool because a tool
+    /// called three times is one thing to fix, and ranked by what was carried rather than by result
+    /// size because those two orders disagree — the largest single result is routinely not the
+    /// largest cost.
+    public List<CarriedContext> carried(int turns) {
+        return this.toolCalls.stream()
+                .collect(Collectors.groupingBy(ToolCall::toolName))
+                .values().stream()
+                .map(calls -> CarriedContext.of(calls, turns))
+                .sorted(Comparator.comparingLong(CarriedContext::carriedBytes).reversed())
+                .toList();
     }
 
     /// What the run was doing between two of its own LLM calls — the longest tool call that fits

@@ -3,7 +3,7 @@ package airhacks.zsmith.logging.boundary;
 import java.nio.file.Path;
 import java.util.Optional;
 
-import airhacks.zsmith.logging.control.Diagnostics;
+import airhacks.zsmith.logging.control.Destinations;
 
 /// Where an agent's diagnostics go, and what stays on the console whatever that answer is.
 ///
@@ -22,12 +22,12 @@ public interface LogSink {
     /// Answers the file they are being written to, or nothing when they stay on the console —
     /// because that is what was configured, or because the file could not be opened.
     static Optional<Path> directDiagnostics(String agentName) {
-        return Diagnostics.direct(agentName);
+        return Destinations.direct(agentName);
     }
 
     /// `release-sink` — flush what is held and close it, returning the routable channels to the
     /// console.
     static void releaseSink() {
-        Diagnostics.release();
+        Destinations.release();
     }
 }

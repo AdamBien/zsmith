@@ -17,7 +17,7 @@
 /// - R2.1 — When a call of a run read nothing from cache and wrote a significant prefix, and it was not that run's first call, then the BC shall report the prefix as re-created at write price. _(why: the same context at cache-write price instead of cache-read price is the largest avoidable cost a conversational run has)_
 /// - R2.2 — When a run's own consecutive calls are spaced further apart than the prompt cache lives, the BC shall report the stretch together with the tool that filled it, where one did. _(why: the gap is the cause and the re-created prefix the effect, so naming only the effect leaves nothing to act on — and a question nobody answered and a sub-agent still working are the same gap and not the same problem)_
 /// - R2.3 — The BC shall not report a run's first call as a re-created prefix. _(why: a first call reads nothing from cache by definition — this is the only thing separating a real expiry from a sub-agent starting cold, and a delegating run has one of those per delegation)_
-/// - R2.4 — When a tool result exceeds the size worth naming and turns followed the one that fetched it, the BC shall report it together with the number of turns that carried it. _(why: a tool result is appended to the conversation and re-sent every turn after, so what it costs is its size times the turns remaining, not the one call that produced it)_
+/// - R2.4 — The BC shall report, per tool, the bytes that tool left in the conversation across the whole run, dearest first, and shall judge it by that carry rather than by the size of any one result. _(why: a result is re-sent on every turn after the one that fetched it, so its cost is size times turns carried — and the two orders disagree, a single 67 KB read costing less than three 27 KB recalls in a longer run; reporting per call would also read as three problems where there is one thing to fix)_
 /// - R2.5 — The BC shall report how many tool calls a run got out of each turn that asked for any, and shall not judge this by how the tools were executed. _(why: an extra turn is a whole round trip that re-sends the conversation, whereas whether two tools ran concurrently is a property the tool declares — a run using only sequential tools has serialized nothing)_
 /// - R2.6 — The BC shall report a run's retries and its tool failures, keyed by what went wrong when there were any.
 /// - R2.7 — The BC shall report a run that never reached a terminal turn as incomplete.
@@ -28,6 +28,7 @@
 /// - Timeline — one run's calls and tool calls in the order they happened
 /// - Call — one LLM call, kept in sequence
 /// - ToolCall — one tool execution, reduced to what decides whether it was expensive and what it held up
+/// - CarriedContext — what one tool cost a run by what it left in the conversation
 ///
 /// ## Decisions
 /// - D1 — Every rule is arithmetic over recorded fields; no model reads the recording. _(why: the findings that matter are sums and differences over fields the stream already carries, and a model asked to find them in a 7 MB log would be guessing at what it could have counted; rejected: an agent reading logs and recordings directly, which pays model tokens to do subtraction and cannot be tested for the same answer twice)_

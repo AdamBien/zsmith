@@ -706,7 +706,7 @@ Every rule is arithmetic over recorded fields — no model reads the recording. 
 |---------|---------------|
 | `cache-expired` | A call read nothing from cache and re-created a significant prefix at write price. A run's *first* call never counts: it reads nothing from cache by definition, which is what separates a real expiry from a sub-agent starting cold. |
 | `idle-gap` | The run's own calls were spaced further apart than the prompt cache lives — the cause of which `cache-expired` is the effect. Names the tool that filled the stretch, where one did: a question nobody answered and a sub-agent still working are the same gap and not the same problem. |
-| `oversized-tool-result` | A large result was appended to the conversation and re-sent on every turn after it. Reported with the turns that carried it, because that, not the one call, is what it cost. |
+| `context-carried` | What each tool left in the conversation, summed per tool and ranked by bytes times the turns that carried them. Judged on the carry, not on any one result: the largest single result is routinely not the largest cost. |
 | `batching` | How many tool calls the run got out of each turn that asked for any. Counted per turn, never by how the tools executed — concurrency is a property `Tool.parallel()` declares, so a run using only sequential tools has serialized nothing. |
 | `retries`, `tool-failures` | Straight from the run's report, keyed by what went wrong. |
 | `incomplete` | The run never reached a terminal turn. |
@@ -726,7 +726,7 @@ the measurements its verdict rests on, so it can be argued with rather than beli
 run d595382d-12cf-464a-8ddf-0b5fc98ec35f
   WARNING cache-expired          the prefix was re-created at write price instead of read from cache — turn 6 read 0 cached tokens and wrote 68789 after 16m 23s waiting on user_question
   NOTE    idle-gap               the run was blocked longer than the prompt cache lives — 16m 23s waiting on user_question between turn 5 and turn 6, cache TTL is 5m 00s
-  NOTE    oversized-tool-result  a large tool result rode the conversation for the rest of the run — recall_memory returned 54998 bytes at turn 0, re-sent on 17 further turns
+  NOTE    context-carried        recall_memory carried 1348 KB through the run — 3 calls totalling 81211 bytes, longest carried 17 turns
   PASS    retries                every API call succeeded on its first attempt — 18 calls, 0 retries
 ```
 

@@ -93,10 +93,10 @@ public enum Log {
             return;
         }
         if (PINNED.contains(this)) {
-            Diagnostics.print(console(), colored, newline);
+            Destinations.print(console(), colored, newline);
             return;
         }
-        Diagnostics.write(console(), colored, newline);
+        Destinations.write(console(), colored, newline);
     }
 
     PrintStream console() {
