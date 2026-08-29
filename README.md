@@ -7,7 +7,7 @@ Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop 
 ## Requirements
 
 - **Java 25+**: uses implicit classes, text blocks, records, and source-file mode
-- **An LLM**: either an **Anthropic API key**, set as `anthropic.api.key` in `~/.zsmith/app.properties` or as a system property, or, on Apple Silicon, [LightMetal](#lightmetal-embedded-local-inference) on the classpath for on-device GGUF inference with no key and no network
+- **An LLM**: an **Anthropic API key** (`anthropic.api.key` in `~/.zsmith/app.properties` or as a system property) for the default provider, or any [alternative provider](#alternative-llm-providers): [Amazon Bedrock Mantle](#amazon-bedrock-mantle), an [OpenAI-compatible endpoint](#openai-endpoint) (including a keyless local Ollama, LM Studio, llama.cpp or vLLM), or [LightMetal](#lightmetal-embedded-local-inference) on Apple Silicon for in-process GGUF inference with no key and no network
 - **The jar**: `zsinstall` fetches a prebuilt `zbo/zsmith.jar`, no build required. Building from source needs [zb](https://github.com/AdamBien/zb): run `zb.sh` in `zsmith/` (no Maven/Gradle)
 
 ## Installation
