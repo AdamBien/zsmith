@@ -7,8 +7,8 @@ Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop 
 ## Requirements
 
 - **Java 25+**: uses implicit classes, text blocks, records, and source-file mode
-- **Anthropic API key**: set `anthropic.api.key` in `~/.zsmith/app.properties` or as a system property
-- **Build with zb**: run `./zb.sh` to produce `zbo/zsmith.jar` (no Maven/Gradle needed)
+- **An LLM**: either an **Anthropic API key**, set as `anthropic.api.key` in `~/.zsmith/app.properties` or as a system property, or, on Apple Silicon, [LightMetal](#lightmetal-embedded-local-inference) on the classpath for on-device GGUF inference with no key and no network
+- **The jar**: `zsinstall` fetches a prebuilt `zbo/zsmith.jar`, no build required. Building from source needs [zb](https://github.com/AdamBien/zb): run `zb.sh` in `zsmith/` (no Maven/Gradle)
 
 ## Installation
 
@@ -521,12 +521,12 @@ zsmith agents can run as standalone Java scripts using source-file mode, with no
 ./src/test/java/airhacks/zsmith/userConfirmationExample
 ```
 
-The script uses a shebang to reference `zbo/zsmith.jar` directly, so build first with `./zb.sh`. Example script:
+The script uses a shebang to reference `zbo/zsmith.jar` directly, so build first with `zb.sh`. Example script:
 
 ```java
 #!/usr/bin/java --class-path=../../../../../zbo/zsmith.jar --source 25
 
-// Requires zbo/zsmith.jar, build first with: ./zb.sh
+// Requires zbo/zsmith.jar, build first with: zb.sh
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.logging.control.Log;
