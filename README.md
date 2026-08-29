@@ -1,6 +1,6 @@
 # zsmith
 
-Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop support. The entire framework is a single **296 KB** jar, with no external libraries, only the Java standard library. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon: drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
+Zero-dependency AI agent harness with tool execution, SKILL.md and agentic loop support. The entire agent implementation is a single **296 KB** jar, with no external libraries, only the JDK 25. Optionally integrates with [LightMetal](#lightmetal-embedded-local-inference) for fully on-device GGUF inference on Apple Silicon: drop `lightmetal.jar` on the classpath and it is auto-selected, no code or config change required.
 
 ![zsmith](zsmith.png)
 
