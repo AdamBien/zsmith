@@ -433,6 +433,8 @@ For such models zsmith derives:
 
 > **One project id covers both wires.** Set `bedrock.project.id` once and zsmith emits the header the active route accepts (`anthropic-workspace-id` for Anthropic models, `openai-project` for OpenAI-compatible ones like Nemotron), so flipping `claude.model` needs no other change. The wire-native keys `anthropic.workspace.id` / `openai.project` still override it when set. (Setting `anthropic.workspace.id` while running a Nemotron model is what triggers Bedrock's `The anthropic-workspace-id header is not supported for this API format` error; use `bedrock.project.id` instead.)
 
+> **`bedrock.project.id` applies only while `llm.provider=bedrock`.** A global `bedrock.project.id` in `~/.zsmith/app.properties` outlives an agent that switches back with `llm.provider=claude`, so it is deliberately ignored off Bedrock — a Bedrock project id sent to `api.anthropic.com` answers `400 … anthropic-workspace-id header must be a valid workspace ID`. Set `anthropic.workspace.id` when the native API really should carry a workspace.
+
 > **Regions are limited and change over time.** This model is offered only in specific regions, and a region that works today may not be the one in your existing Bedrock config. If you get a "model isn't supported"/availability error, check the current regions on the [model card](https://docs.aws.amazon.com/bedrock/latest/userguide/model-card-nvidia-nemotron-super-3-120b.html) and set `bedrock.region` accordingly.
 
 #### OpenAI endpoint

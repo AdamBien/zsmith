@@ -12,6 +12,7 @@ void main() {
     openaiWireUsesProjectHeader();
     bedrockProjectIdFallsBackForAnthropicWire();
     bedrockProjectIdFallsBackForOpenAIWire();
+    bedrockProjectIdIsIgnoredWithoutBedrockProvider();
     wireNativeKeyWinsOverBedrockProjectId();
     blankValueProducesNoHeader();
     unsetProducesNoHeader();
@@ -34,21 +35,40 @@ void openaiWireUsesProjectHeader() {
 }
 
 void bedrockProjectIdFallsBackForAnthropicWire() {
-    reload(props -> props.setProperty("bedrock.project.id", "bp_789"));
+    reload(props -> {
+        props.setProperty("llm.provider", "bedrock");
+        props.setProperty("bedrock.project.id", "bp_789");
+    });
     var header = Claude.projectHeader(Wire.ANTHROPIC).orElseThrow();
     assert "anthropic-workspace-id".equals(header.name()) : "wrong header name: " + header.name();
     assert "bp_789".equals(header.value()) : "fallback not applied: " + header.value();
 }
 
 void bedrockProjectIdFallsBackForOpenAIWire() {
-    reload(props -> props.setProperty("bedrock.project.id", "bp_789"));
+    reload(props -> {
+        props.setProperty("llm.provider", "bedrock");
+        props.setProperty("bedrock.project.id", "bp_789");
+    });
     var header = Claude.projectHeader(Wire.OPENAI).orElseThrow();
     assert "openai-project".equals(header.name()) : "wrong header name: " + header.name();
     assert "bp_789".equals(header.value()) : "fallback not applied: " + header.value();
 }
 
+/// A globally configured `bedrock.project.id` must not reach the native Anthropic API when an
+/// agent overrides `llm.provider=claude` — `api.anthropic.com` answers a Bedrock project id with
+/// "anthropic-workspace-id header must be a valid workspace ID".
+void bedrockProjectIdIsIgnoredWithoutBedrockProvider() {
+    reload(props -> {
+        props.setProperty("llm.provider", "claude");
+        props.setProperty("bedrock.project.id", "bp_789");
+    });
+    assert Claude.projectHeader(Wire.ANTHROPIC).isEmpty() : "bedrock project id leaked to the native API";
+    assert Claude.projectHeader(Wire.OPENAI).isEmpty() : "bedrock project id leaked to the OpenAI wire";
+}
+
 void wireNativeKeyWinsOverBedrockProjectId() {
     reload(props -> {
+        props.setProperty("llm.provider", "bedrock");
         props.setProperty("openai.project", "native_wins");
         props.setProperty("bedrock.project.id", "shared_fallback");
     });
@@ -76,6 +96,7 @@ void reload(java.util.function.Consumer<java.util.Properties> mutator) {
 }
 
 void clearProps() {
+    System.clearProperty("llm.provider");
     System.clearProperty("anthropic.workspace.id");
     System.clearProperty("openai.project");
     System.clearProperty("bedrock.project.id");

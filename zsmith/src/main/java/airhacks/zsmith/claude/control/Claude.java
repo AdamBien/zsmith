@@ -83,10 +83,17 @@ public interface Claude {
     /// expects the opposite. The *value* comes from the wire-native key
     /// (`anthropic.workspace.id` / `openai.project`), falling back to the shared
     /// [#bedrockProjectId()] so one properties file serves both Bedrock model families.
+    ///
+    /// The fallback only applies while [#bedrock()] is active. A Bedrock project id is
+    /// meaningless to the native Anthropic API, and a global `bedrock.project.id` outlives an
+    /// agent-level `llm.provider=claude` override — sending it on to `api.anthropic.com` is what
+    /// produces `anthropic-workspace-id header must be a valid workspace ID`. An explicitly set
+    /// `anthropic.workspace.id` is still honoured on every route, because that key names a real
+    /// Anthropic workspace.
     static Optional<ProjectHeader> projectHeader(Wire wire) {
         var name = wire == Wire.OPENAI ? "openai-project" : "anthropic-workspace-id";
         var key = wire == Wire.OPENAI ? "openai.project" : "anthropic.workspace.id";
-        var value = ZCfg.string(key, bedrockProjectId());
+        var value = ZCfg.string(key, bedrock() ? bedrockProjectId() : null);
         if (value == null || value.isBlank()) {
             return Optional.empty();
         }
