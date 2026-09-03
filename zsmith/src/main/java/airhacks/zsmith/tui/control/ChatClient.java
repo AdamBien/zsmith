@@ -1,5 +1,7 @@
 package airhacks.zsmith.tui.control;
 
+import static airhacks.zsmith.Concern.Kind.EXTERNAL_SYSTEM;
+
 import java.io.IOException;
 import java.net.ConnectException;
 import java.net.URI;
@@ -9,9 +11,11 @@ import java.net.http.HttpRequest.BodyPublishers;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.time.Duration;
 
+import airhacks.zsmith.Concern;
 import airhacks.zsmith.tui.entity.Config;
 import airhacks.zsmith.tui.entity.Response;
 
+@Concern(EXTERNAL_SYSTEM)
 public class ChatClient {
 
     static final String SESSION_HEADER = "X-Session-Id";
