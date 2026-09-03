@@ -34,7 +34,10 @@ public @interface Concern {
         /// Exists to record what the process did: the JFR event types, and the components that
         /// capture and read recordings back. A class that emits an event in passing is not this.
         OBSERVABILITY,
-        /// communication with external systems
+        /// Exists to communicate with a system that has its own lifecycle and failure modes —
+        /// another process, a remote service, or a foreign in-process engine. Ownership is not
+        /// the criterion: the project's own server counts. Not this: the class that owns the
+        /// shared HttpClient, or a class that merely triggers the call.
         EXTERNAL_SYSTEM
     }
 }
