@@ -14,7 +14,10 @@ import java.time.Duration;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.HttpTimeouts;
+import airhacks.zsmith.Concern;
+import static airhacks.zsmith.Concern.Kind.EXTERNAL;
 
+@Concern(EXTERNAL)
 public interface LinkCheckerTool {
 
     /// Deliberately shorter than the LLM transport timeouts: a reachability check should fail fast

@@ -18,7 +18,10 @@ import airhacks.zsmith.telemetry.entity.TokenUsage;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
+import airhacks.zsmith.Concern;
+import static airhacks.zsmith.Concern.Kind.EXTERNAL;
 
+@Concern(EXTERNAL)
 public interface OpenAI {
 
     static URI endpoint() {

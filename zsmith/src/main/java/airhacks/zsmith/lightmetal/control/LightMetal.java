@@ -1,12 +1,14 @@
 package airhacks.zsmith.lightmetal.control;
 
+import static airhacks.zsmith.Concern.Kind.EXTERNAL;
+
 import java.util.Optional;
 import java.util.ServiceLoader;
 import java.util.function.UnaryOperator;
 
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
-
+import airhacks.zsmith.Concern;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.telemetry.boundary.RunTally;
@@ -15,6 +17,7 @@ import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 
+@Concern(EXTERNAL)
 public interface LightMetal {
 
     String MODEL_PROPERTY = "lightmetal.model";
