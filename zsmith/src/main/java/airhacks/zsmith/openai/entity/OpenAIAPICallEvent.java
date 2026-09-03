@@ -6,6 +6,10 @@ import jdk.jfr.Event;
 import jdk.jfr.Label;
 import jdk.jfr.Name;
 
+import airhacks.zsmith.Concern;
+import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
+
+@Concern(OBSERVABILITY)
 @Name(OpenAIAPICallEvent.NAME)
 @Label("OpenAI API Call")
 @Category({"zsmith", "openai"})

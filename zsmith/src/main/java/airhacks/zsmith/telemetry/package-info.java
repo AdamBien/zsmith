@@ -73,4 +73,8 @@
 /// - Persisting a report or a tally beyond the process — a capture holds events, never reports
 /// - Deciding when a run is worth capturing — capture is all-or-nothing per JVM, by configuration
 /// - Reading a capture back into reports is `replay-recording`, which does not care who wrote the file
+@Concern(OBSERVABILITY)
 package airhacks.zsmith.telemetry;
+
+import airhacks.zsmith.Concern;
+import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;

@@ -44,4 +44,8 @@
 /// - Rewriting the system prompt, the skill or the tool description a finding implicates — `improvements` collects instruction gaps, and mechanical findings landing in that backlog would blur what it is for
 /// - Diagnosing a run while it is still running
 /// - Deciding what a run should have done instead in any sense a threshold cannot express
+@Concern(OBSERVABILITY)
 package airhacks.zsmith.diagnostics;
+
+import airhacks.zsmith.Concern;
+import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
