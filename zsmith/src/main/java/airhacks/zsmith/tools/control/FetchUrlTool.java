@@ -14,9 +14,9 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.configuration.control.HttpTimeouts;
 import airhacks.zsmith.Concern;
-import static airhacks.zsmith.Concern.Kind.EXTERNAL;
+import static airhacks.zsmith.Concern.Kind.EXTERNAL_SYSTEM;
 
-@Concern(EXTERNAL)
+@Concern(EXTERNAL_SYSTEM)
 public interface FetchUrlTool {
 
     /// Deliberately shorter than the LLM transport timeouts: a page fetch should fail fast

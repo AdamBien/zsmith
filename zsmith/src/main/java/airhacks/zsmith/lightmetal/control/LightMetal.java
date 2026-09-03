@@ -1,6 +1,6 @@
 package airhacks.zsmith.lightmetal.control;
 
-import static airhacks.zsmith.Concern.Kind.EXTERNAL;
+import static airhacks.zsmith.Concern.Kind.EXTERNAL_SYSTEM;
 
 import java.util.Optional;
 import java.util.ServiceLoader;
@@ -17,7 +17,7 @@ import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
 import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 
-@Concern(EXTERNAL)
+@Concern(EXTERNAL_SYSTEM)
 public interface LightMetal {
 
     String MODEL_PROPERTY = "lightmetal.model";

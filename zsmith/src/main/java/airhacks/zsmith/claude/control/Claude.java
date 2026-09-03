@@ -22,11 +22,11 @@ import airhacks.zsmith.llm.entity.ToolChoice;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.openai.control.OpenAI;
 import airhacks.zsmith.Concern;
-import static airhacks.zsmith.Concern.Kind.EXTERNAL;
+import static airhacks.zsmith.Concern.Kind.EXTERNAL_SYSTEM;
 
 
 
-@Concern(EXTERNAL)
+@Concern(EXTERNAL_SYSTEM)
 public interface Claude {
 
     Models defaultModel = Models.CLAUDE_48_OPUS;

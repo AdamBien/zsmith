@@ -17,7 +17,7 @@ import static java.lang.annotation.RetentionPolicy.SOURCE;
 /// scattered across components that serve something else. Never the same kind twice for one
 /// class; a type may carry a kind its package does not declare.
 ///
-/// Retained in source only: every consumer — the reader, the agent, javadoc, ConcernTest —
+/// Retained in source only: every consumer — the reader, the agent, javadoc —
 /// reads the source, and the jar stays free of the metadata.
 @Documented
 @Retention(SOURCE)
@@ -28,13 +28,13 @@ public @interface Concern {
 
     /// A kind is admitted only when its members are few, would not exist without the concern,
     /// and cannot be enumerated by an import search alone — otherwise the marker restates a
-    /// grep. ConcernTest holds each one to the part of its set that is mechanically derivable.
+    /// grep.
     enum Kind {
 
         /// Exists to record what the process did: the JFR event types, and the components that
         /// capture and read recordings back. A class that emits an event in passing is not this.
         OBSERVABILITY,
         /// communication with external systems
-        EXTERNAL
+        EXTERNAL_SYSTEM
     }
 }
