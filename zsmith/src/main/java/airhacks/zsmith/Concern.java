@@ -27,12 +27,14 @@ public @interface Concern {
     Kind value();
 
     /// A kind is admitted only when its members are few, would not exist without the concern,
-    /// and cannot be enumerated by an import search alone — otherwise the marker restates a
-    /// grep.
+    /// and the application — not the platform — implements it. Each kind states what does not
+    /// qualify — the exclusions carry the information.
     enum Kind {
 
-        /// Exists to record what the process did: the JFR event types, and the components that
-        /// capture and read recordings back. A class that emits an event in passing is not this.
+        /// Exists to record what the process did — whatever the transport: JFR events, OTEL
+        /// spans and metrics, dedicated diagnostic loggers, and the components that capture
+        /// and read them back. The emitting API is not the criterion. A class that emits or
+        /// logs in passing is not this.
         OBSERVABILITY,
         /// Exists to communicate with a system that has its own lifecycle and failure modes —
         /// another process, a remote service, or a foreign in-process engine. Ownership is not
