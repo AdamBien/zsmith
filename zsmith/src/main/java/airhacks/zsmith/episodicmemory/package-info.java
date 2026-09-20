@@ -35,7 +35,7 @@
 ///
 /// ### R4: Find the memories a query is about
 /// - R4.1 — When a query is supplied, the BC shall return the memories relevant to it, most relevant first.
-/// - R4.2 — The BC shall rank a memory carrying more of the query's terms above one carrying fewer.
+/// - R4.2 — When two memories are alike but for the query terms they carry, the BC shall rank the one carrying more of them first.
 /// - R4.3 — The BC shall weigh a query term carried by few memories above one carried by many. _(why: a term nearly every memory carries separates nothing, so it must not decide the ranking)_
 /// - R4.4 — The BC shall let each further occurrence of a term within one memory raise that memory's rank by less than the occurrence before it. _(why: a memory repeating a word is not proportionally more about it, and unbounded counting lets one verbose memory win every query)_
 /// - R4.5 — The BC shall match a query term against any word beginning with it, disregarding case. _(why: a remembered fact and the later question about it commonly differ only by an inflection — build against builds — which exact matching misses)_

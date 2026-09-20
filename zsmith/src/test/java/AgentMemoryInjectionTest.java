@@ -34,6 +34,7 @@ void populatedStoreInjectsCatalog() throws Exception {
     assert prompt.contains("gamma fact") : "R4.3 — prompt should contain gamma fact";
     assert agent.tools().containsKey("store_memory") : "R4.3 — store_memory tool should be registered, got: " + agent.tools().keySet();
     assert agent.tools().containsKey("recall_memory") : "R4.3 — recall_memory tool should be registered, got: " + agent.tools().keySet();
+    assert agent.tools().containsKey("search_memory") : "R4.3 — search_memory tool should be registered, got: " + agent.tools().keySet();
 
     store.clear();
 }

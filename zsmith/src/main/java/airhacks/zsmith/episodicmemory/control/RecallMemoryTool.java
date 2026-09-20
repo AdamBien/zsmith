@@ -51,18 +51,6 @@ public class RecallMemoryTool implements Tool {
             episodes = store.recent(limit);
         }
 
-        if (episodes.isEmpty()) {
-            return "No memories found.";
-        }
-
-        var result = new StringBuilder();
-        for (var episode : episodes) {
-            result.append("[%s] %s".formatted(episode.timestamp(), episode.content()));
-            if (episode.type() != null) {
-                result.append(" (type: %s)".formatted(episode.type().name()));
-            }
-            result.append("\n");
-        }
-        return result.toString().strip();
+        return Memories.format(episodes);
     }
 }

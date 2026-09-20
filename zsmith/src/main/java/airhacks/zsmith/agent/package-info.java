@@ -48,7 +48,7 @@
 /// ### R4: Equip capabilities
 /// - R4.1 — When a tool is registered, the BC shall expose its definition to the LLM on every invocation.
 /// - R4.2 — When skills are attached, the BC shall append the skill catalog to the system prompt and register a skill-loading tool.
-/// - R4.3 — When episodic memory is attached, the BC shall append the memory catalog to the system prompt and register memory store and recall tools.
+/// - R4.3 — When episodic memory is attached, the BC shall append the memory catalog to the system prompt and register memory store, recall and search tools.
 /// - R4.4 — If an attached skill or memory catalog is empty, then the BC shall leave the system prompt unchanged.
 /// - R4.5 — When a sub-agent is attached, the BC shall expose the child agent as a tool.
 ///

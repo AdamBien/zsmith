@@ -25,6 +25,7 @@ import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.correlation.entity.Correlation;
 import airhacks.zsmith.episodicmemory.boundary.EpisodicMemoryStore;
 import airhacks.zsmith.episodicmemory.control.RecallMemoryTool;
+import airhacks.zsmith.episodicmemory.control.SearchMemoryTool;
 import airhacks.zsmith.episodicmemory.control.StoreMemoryTool;
 import airhacks.zsmith.improvements.boundary.ImprovementLog;
 import airhacks.zsmith.improvements.control.ReportImprovementTool;
@@ -179,6 +180,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 this.temperature, store);
         agent.tools.put("store_memory", new StoreMemoryTool(store));
         agent.tools.put("recall_memory", new RecallMemoryTool(store));
+        agent.tools.put("search_memory", new SearchMemoryTool(store));
         return agent;
     }
 
