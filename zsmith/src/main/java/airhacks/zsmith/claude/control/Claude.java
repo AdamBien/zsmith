@@ -8,6 +8,8 @@ import java.net.http.HttpResponse;
 import java.net.http.HttpResponse.BodyHandlers;
 import java.util.EnumSet;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Stream;
 
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
@@ -29,7 +31,7 @@ import static airhacks.zsmith.Concern.Kind.EXTERNAL_SYSTEM;
 @Concern(EXTERNAL_SYSTEM)
 public interface Claude {
 
-    Models defaultModel = Models.CLAUDE_48_OPUS;
+    Models defaultModel = Models.CLAUDE_5_OPUS;
     String fallbackModelName = "claude-sonnet-4-7";
 
     static String apiKey() {
@@ -112,12 +114,15 @@ public interface Claude {
     /// on the same Bedrock Mantle host an Opus model is `ANTHROPIC` while Nemotron is `OPENAI`.
     enum Wire { ANTHROPIC, OPENAI }
 
+    /// The model catalog, declared newest release first: a partial name that matches several
+    /// entries (`opus`) resolves to the first, so it always means the current generation.
     enum Models {
-        NVIDIA_NEMOTRON_SUPER_3_120B("nvidia.nemotron-super-3-120b", "nvidia.nemotron-super-3-120b", 32_000, EnumSet.of(Capability.TEMPERATURE), Wire.OPENAI),
+        CLAUDE_5_OPUS("claude-opus-5", "claude-opus-4-8", 64_000, EnumSet.of(Capability.EFFORT, Capability.ADAPTIVE_THINKING), Wire.ANTHROPIC),
         CLAUDE_48_OPUS("claude-opus-4-8", Claude.fallbackModelName, 32_000, EnumSet.of(Capability.EFFORT, Capability.ADAPTIVE_THINKING), Wire.ANTHROPIC),
         CLAUDE_47_OPUS("claude-opus-4-7", Claude.fallbackModelName, 32_000, EnumSet.of(Capability.EFFORT, Capability.ADAPTIVE_THINKING), Wire.ANTHROPIC),
         CLAUDE_46_OPUS("claude-opus-4-6", Claude.fallbackModelName, 32_000, EnumSet.of(Capability.EFFORT, Capability.ADAPTIVE_THINKING), Wire.ANTHROPIC),
-        CLAUDE_46_SONNET(Claude.fallbackModelName, Claude.fallbackModelName, 64_000, EnumSet.allOf(Capability.class), Wire.ANTHROPIC);
+        CLAUDE_46_SONNET(Claude.fallbackModelName, Claude.fallbackModelName, 64_000, EnumSet.allOf(Capability.class), Wire.ANTHROPIC),
+        NVIDIA_NEMOTRON_SUPER_3_120B("nvidia.nemotron-super-3-120b", "nvidia.nemotron-super-3-120b", 32_000, EnumSet.of(Capability.TEMPERATURE), Wire.OPENAI);
 
         private String modelName;
         private String fallbackModelName;
@@ -165,14 +170,14 @@ public interface Claude {
             .orElse(defaultModel);
         }
 
+        /// The first match in declaration order, so an ambiguous partial resolves to the most
+        /// recently released model.
         public static Optional<Models> fromPartialMatch(String partialName) {
-            if(partialName == null)
+            if (partialName == null)
                 return Optional.empty();
-            return EnumSet.allOf(Models.class)
-                    .stream()
+            return Stream.of(values())
                     .filter(model -> model.matches(partialName))
-                    .findAny();
-         
+                    .findFirst();
         }
     }
 
@@ -203,12 +208,14 @@ public interface Claude {
         return URI.create("%s://%s%s".formatted(scheme, authority, path));
     }
 
-    static String modelName() {
-        var model = ZCfg.string("claude.model", currentModel.modelName());
-        if (bedrock() && !model.contains(".")) {
-            return "anthropic." + model;
+    /// The name the model is sent under. A configured `claude.model` is sent as given, even when
+    /// it names nothing in the catalog, so an uncatalogued model stays reachable.
+    static String modelName(Models model) {
+        var name = ZCfg.string("claude.model", model.modelName());
+        if (bedrock() && !name.contains(".")) {
+            return "anthropic." + name;
         }
-        return model;
+        return name;
     }
 
     static JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature,
@@ -216,8 +223,8 @@ public interface Claude {
         if (currentModel.wire() == Wire.OPENAI) {
             return invokeOpenAICompatible(system, messages, tools, temperature, toolChoice);
         }
-        var payloadJSON = claudeMessage(messages, temperature, system);
-        payloadJSON.put("model", modelName());
+        var payloadJSON = claudeMessage(currentModel, messages, temperature, system);
+        payloadJSON.put("model", modelName(currentModel));
         if (tools != null && !tools.isEmpty()) {
             payloadJSON.put("tools", tools);
             if (toolChoice == ToolChoice.required) {
@@ -240,7 +247,7 @@ public interface Claude {
     /// Anthropic Messages shape callers expect.
     static JSONObject invokeOpenAICompatible(String system, JSONArray messages, JSONArray tools, float temperature,
             ToolChoice toolChoice) {
-        var payload = OpenAI.translateRequest(system, messages, tools, temperature, modelName(),
+        var payload = OpenAI.translateRequest(system, messages, tools, temperature, modelName(currentModel),
                 currentModel.maxTokens(), toolChoice).toString();
         Log.request(payload);
         Log.llm(">> " + payload);
@@ -255,8 +262,8 @@ public interface Claude {
     public static JSONObject invoke(String system, String user, float temperature) {
         var enclosedPrompt = messagePrompt(user);
         Log.request(enclosedPrompt.toString());
-        var payloadJSON = Claude.claudeMessage(enclosedPrompt, temperature, system);
-        payloadJSON.put("model", modelName());
+        var payloadJSON = Claude.claudeMessage(currentModel, enclosedPrompt, temperature, system);
+        payloadJSON.put("model", modelName(currentModel));
         var payload = payloadJSON.toString();
         Log.request(payload);
         Log.llm(">> " + payload);
@@ -266,29 +273,35 @@ public interface Claude {
         return new JSONObject(answer);
     }
 
-    static JSONObject claudeMessage(JSONArray messages, float temperature, String system) {
+    /// The request body for one model, carrying only the settings that model accepts.
+    static JSONObject claudeMessage(Models model, JSONArray messages, float temperature, String system) {
         var payload = new JSONObject()
-                .put("max_tokens", currentModel.maxTokens())
+                .put("max_tokens", model.maxTokens())
                 .put("messages", CacheControl.messages(messages))
                 .put("system", CacheControl.system(system));
-        if (currentModel.supports(Capability.TEMPERATURE)) {
+        if (model.supports(Capability.TEMPERATURE)) {
             payload.put("temperature", temperature);
         }
-        var thinking = thinkingConfig();
+        var thinking = thinkingConfig(model);
         if (thinking != null) {
             payload.put("thinking", thinking);
         }
-        var outputConfig = outputConfig();
+        var outputConfig = outputConfig(model);
         if (outputConfig != null) {
             payload.put("output_config", outputConfig);
         }
         return payload;
     }
 
-    static JSONObject thinkingConfig() {
-        if (!currentModel.supports(Capability.ADAPTIVE_THINKING)) return null;
+    static JSONObject thinkingConfig(Models model) {
+        if (!model.supports(Capability.ADAPTIVE_THINKING)) return null;
         var mode = ZCfg.string("claude.thinking", null);
         if (mode == null || mode.isBlank()) return null;
+        if (refusesDisabledThinking(model, mode)) {
+            Log.warning("%s rejects thinking=%s at effort=%s — sending without a thinking mode, adaptive thinking applies"
+                    .formatted(model.modelName(), mode, effort()));
+            return null;
+        }
         var thinking = new JSONObject().put("type", mode);
         var display = ZCfg.string("claude.thinking.display", null);
         if (display != null && !display.isBlank() && "adaptive".equals(mode)) {
@@ -297,10 +310,23 @@ public interface Claude {
         return thinking;
     }
 
-    static JSONObject outputConfig() {
-        if (!currentModel.supports(Capability.EFFORT)) return null;
-        var effort = ZCfg.string("claude.effort", null);
-        if (effort == null || effort.isBlank()) return null;
+    /// Claude Opus 5 thinks by default and accepts `thinking: disabled` only up to `high` effort;
+    /// above that the API answers 400. Omitting the thinking mode lets the request go through with
+    /// adaptive thinking, which is what the model does on its own anyway.
+    static boolean refusesDisabledThinking(Models model, String thinkingMode) {
+        return model == Models.CLAUDE_5_OPUS
+                && "disabled".equals(thinkingMode)
+                && Set.of("xhigh", "max").contains(effort());
+    }
+
+    static String effort() {
+        return ZCfg.string("claude.effort", "");
+    }
+
+    static JSONObject outputConfig(Models model) {
+        if (!model.supports(Capability.EFFORT)) return null;
+        var effort = effort();
+        if (effort.isBlank()) return null;
         return new JSONObject().put("effort", effort);
     }
 
