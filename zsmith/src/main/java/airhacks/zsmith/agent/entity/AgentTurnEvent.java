@@ -7,6 +7,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 import airhacks.zsmith.Concern;
+import airhacks.zsmith.correlation.entity.Correlation;
 import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 
 @Concern(OBSERVABILITY)
@@ -52,4 +53,16 @@ public class AgentTurnEvent extends Event {
 
     @Label("Terminal")
     public boolean terminal;
+
+    /// The where-am-I half of the event, taken from the correlation the turn runs under and
+    /// the run that delegated to it. The outcome fields are filled as the turn plays out.
+    public static AgentTurnEvent of(String agentName, Correlation correlation, Correlation parent) {
+        var event = new AgentTurnEvent();
+        event.agentName = agentName;
+        event.runId = correlation.runId();
+        event.parentRunId = parent.runId();
+        event.depth = correlation.depth();
+        event.iteration = correlation.iteration();
+        return event;
+    }
 }

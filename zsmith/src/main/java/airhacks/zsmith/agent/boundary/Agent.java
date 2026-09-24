@@ -376,7 +376,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         /// Blank and depth 0 for a top-level chat; the delegating run and its depth when a
         /// sub-agent is running, which is what links a child run back into the tree.
         var parent = Correlations.current();
-        var run = Correlation.start(parent.depth());
+        var run = Correlation.start(parent);
         String lastText = null;
         String exitReason = "max_iterations";
         int turns = 0;
@@ -384,12 +384,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         for (int iteration = 0; iteration < this.maxIterations; iteration++) {
             turns = iteration + 1;
             var correlation = run.atIteration(iteration);
-            var turnEvent = new AgentTurnEvent();
-            turnEvent.agentName = this.name;
-            turnEvent.runId = run.runId();
-            turnEvent.parentRunId = parent.runId();
-            turnEvent.depth = parent.depth();
-            turnEvent.iteration = iteration;
+            var turnEvent = AgentTurnEvent.of(this.name, correlation, parent);
             turnEvent.begin();
             try {
                 var toolChoice = ToolChoice.forTurn(iteration);
