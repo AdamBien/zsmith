@@ -28,7 +28,8 @@ public record Correlation(String runId, int iteration, int depth) {
 
     /// The first turn of a fresh run. The run id is minted here and nowhere else, so
     /// every later turn derived via `atIteration` and every sub-agent via `deeper` share it.
-    public static Correlation start(int depth) {
+    public static Correlation start(Correlation parent) {
+        var depth = parent.depth();
         return new Correlation(UUID.randomUUID().toString(), 0, depth);
     }
 
