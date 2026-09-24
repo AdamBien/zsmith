@@ -1,5 +1,7 @@
 package airhacks.zsmith.correlation.entity;
 
+import java.util.UUID;
+
 /// Identifies the chat loop an event belongs to. `runId` groups every event of one
 /// `chat` / `act` invocation — turns, tool calls, LLM calls, sub-agent dispatches —
 /// `iteration` locates the turn within it, and `depth` says how far down the sub-agent
@@ -22,6 +24,17 @@ public record Correlation(String runId, int iteration, int depth) {
         if (runId == null) {
             runId = "";
         }
+    }
+
+    /// The first turn of a fresh run. The run id is minted here and nowhere else, so
+    /// every later turn derived via `atIteration` and every sub-agent via `deeper` share it.
+    public static Correlation start(int depth) {
+        return new Correlation(UUID.randomUUID().toString(), 0, depth);
+    }
+
+    /// The same run, positioned at a later turn.
+    public Correlation atIteration(int iteration) {
+        return new Correlation(this.runId, iteration, this.depth);
     }
 
     /// The context a delegated sub-agent runs in: one level further down, still pointing

@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -377,17 +376,17 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         /// Blank and depth 0 for a top-level chat; the delegating run and its depth when a
         /// sub-agent is running, which is what links a child run back into the tree.
         var parent = Correlations.current();
-        var runId = UUID.randomUUID().toString();
+        var run = Correlation.start(parent.depth());
         String lastText = null;
         String exitReason = "max_iterations";
         int turns = 0;
         try {
         for (int iteration = 0; iteration < this.maxIterations; iteration++) {
             turns = iteration + 1;
-            var correlation = new Correlation(runId, iteration, parent.depth());
+            var correlation = run.atIteration(iteration);
             var turnEvent = new AgentTurnEvent();
             turnEvent.agentName = this.name;
-            turnEvent.runId = runId;
+            turnEvent.runId = run.runId();
             turnEvent.parentRunId = parent.runId();
             turnEvent.depth = parent.depth();
             turnEvent.iteration = iteration;
@@ -402,7 +401,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                                 this.temperature,
                                 toolChoice));
                 progress.addLLMInvocation();
-                progress.update(iteration + 1, RunTally.runningTokens(runId));
+                progress.update(iteration + 1, RunTally.runningTokens(run.runId()));
 
                 var content = response.getJSONArray("content");
                 var stopReason = response.optString("stop_reason", "end_turn");
@@ -479,9 +478,9 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             if (lastText != null) {
                 Log.agent("last assistant text: " + truncate(lastText, 500));
             }
-            storeTranscript(runId, exitReason, turns);
-            progress.summary(RunTally.runningTokens(runId));
-            RunTally.discard(runId);
+            storeTranscript(run.runId(), exitReason, turns);
+            progress.summary(RunTally.runningTokens(run.runId()));
+            RunTally.discard(run.runId());
         }
     }
 
