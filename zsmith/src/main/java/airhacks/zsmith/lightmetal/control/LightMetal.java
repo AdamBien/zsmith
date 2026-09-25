@@ -44,12 +44,9 @@ public interface LightMetal {
         Log.request(payloadString);
         Log.llm(">> " + payloadString);
 
-        var event = new LightMetalAPICallEvent();
         var correlation = Correlations.current();
-        event.runId = correlation.runId();
-        event.iteration = correlation.iteration();
+        var event = LightMetalAPICallEvent.of(correlation, payload.optString("model", "(from lightmetal config)"));
         event.begin();
-        event.model = payload.optString("model", "(from lightmetal config)");
         Log.agent("invoking lightmetal model: " + event.model);
 
         var chat = ChatHolder.lookup();

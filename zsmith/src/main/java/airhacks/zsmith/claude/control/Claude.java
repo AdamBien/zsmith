@@ -361,14 +361,10 @@ public interface Claude {
     }
 
     static HttpResponse<String> sendInstrumented(String message, String model, int attempt) {
-        var event = new ClaudeAPICallEvent();
         var correlation = Correlations.current();
-        event.runId = correlation.runId();
-        event.iteration = correlation.iteration();
+        var event = ClaudeAPICallEvent.of(correlation, model, attempt);
         event.begin();
         var response = send(message);
-        event.model = model;
-        event.attempt = attempt;
         event.statusCode = response.statusCode();
         populateUsage(event, response);
         logTokens(event);

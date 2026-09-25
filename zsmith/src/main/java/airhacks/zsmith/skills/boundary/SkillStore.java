@@ -83,8 +83,7 @@ public class SkillStore {
         if (!Files.isRegularFile(skillFile)) {
             return;
         }
-        var event = new SkillLoadEvent();
-        event.path = skillFile.toString();
+        var event = SkillLoadEvent.of(skillFile);
         event.begin();
         try {
             var raw = Files.readString(skillFile);

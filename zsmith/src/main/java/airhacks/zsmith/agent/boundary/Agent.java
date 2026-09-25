@@ -280,12 +280,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     /// the tool reaches — episodic memory, a nested agent, another LLM call — records the
     /// same run, on whichever thread it ends up.
     ToolResult executeTool(ToolUse toolUse, Correlation correlation) {
-        var event = new ToolInvocationEvent();
-        event.agentName = this.name;
-        event.runId = correlation.runId();
-        event.iteration = correlation.iteration();
-        event.toolUseId = toolUse.id();
-        event.toolName = toolUse.name();
+        var event = ToolInvocationEvent.of(this.name, correlation, toolUse);
         event.begin();
         try {
             var tool = this.tools.get(toolUse.name());

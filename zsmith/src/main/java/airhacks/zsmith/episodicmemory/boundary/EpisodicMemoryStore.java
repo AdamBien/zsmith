@@ -235,10 +235,7 @@ public class EpisodicMemoryStore {
     }
 
     void save(Episode episode) {
-        var event = new MemoryAccessEvent();
-        event.runId = Correlations.current().runId();
-        event.store = "episodic";
-        event.operation = "save";
+        var event = MemoryAccessEvent.of(Correlations.current(), "episodic", "save");
         event.episodeCount = size();
         event.begin();
         try {
@@ -257,10 +254,7 @@ public class EpisodicMemoryStore {
     }
 
     void load() {
-        var event = new MemoryAccessEvent();
-        event.runId = Correlations.current().runId();
-        event.store = "episodic";
-        event.operation = "load";
+        var event = MemoryAccessEvent.of(Correlations.current(), "episodic", "load");
         event.begin();
         try {
             var loaded = new ArrayList<>(read(this.store));

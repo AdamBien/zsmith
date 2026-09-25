@@ -51,12 +51,9 @@ public interface OpenAI {
         Log.request(payloadString);
         Log.llm(">> " + payloadString);
 
-        var event = new OpenAIAPICallEvent();
         var correlation = Correlations.current();
-        event.runId = correlation.runId();
-        event.iteration = correlation.iteration();
+        var event = OpenAIAPICallEvent.of(correlation, model());
         event.begin();
-        event.model = model();
         var response = send(payloadString);
         event.statusCode = response.statusCode();
 

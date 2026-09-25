@@ -7,6 +7,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 import airhacks.zsmith.Concern;
+import airhacks.zsmith.correlation.entity.Correlation;
 import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 
 @Concern(OBSERVABILITY)
@@ -42,4 +43,14 @@ public class OpenAIAPICallEvent extends Event {
 
     @Label("Output Tokens")
     public int outputTokens;
+
+    /// The where-am-I half of the event: which turn is calling and which model. Status,
+    /// stop reason and token counts arrive with the response.
+    public static OpenAIAPICallEvent of(Correlation correlation, String model) {
+        var event = new OpenAIAPICallEvent();
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
+        event.model = model;
+        return event;
+    }
 }

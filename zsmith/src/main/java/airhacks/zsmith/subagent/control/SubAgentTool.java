@@ -80,14 +80,10 @@ public class SubAgentTool implements Tool {
 
     @Override
     public String execute(JSONObject input) {
-        var event = new SubAgentDispatchEvent();
         var correlation = Correlations.current();
-        event.childAgent = this.subAgent.name();
-        event.runId = correlation.runId();
-        event.depth = correlation.depth();
         var firstRunDone = firstRunCompleted();
-        event.firstRun = !firstRunDone;
-        event.mode = (this.runParallel && firstRunDone) ? "parallel" : "sequential";
+        var parallel = this.runParallel && firstRunDone;
+        var event = SubAgentDispatchEvent.of(this.subAgent.name(), correlation, parallel, !firstRunDone);
         event.begin();
         try {
             if (event.depth >= this.maxDepth) {

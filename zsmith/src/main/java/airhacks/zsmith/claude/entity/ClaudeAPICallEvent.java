@@ -7,6 +7,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 import airhacks.zsmith.Concern;
+import airhacks.zsmith.correlation.entity.Correlation;
 import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 
 @Concern(OBSERVABILITY)
@@ -52,4 +53,15 @@ public class ClaudeAPICallEvent extends Event {
 
     @Label("Cache Creation Tokens")
     public int cacheCreationTokens;
+
+    /// The where-am-I half of the event: which turn is calling, which model, and which
+    /// attempt this is. Status, stop reason and token counts arrive with the response.
+    public static ClaudeAPICallEvent of(Correlation correlation, String model, int attempt) {
+        var event = new ClaudeAPICallEvent();
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
+        event.model = model;
+        event.attempt = attempt;
+        return event;
+    }
 }

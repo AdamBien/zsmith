@@ -7,6 +7,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 import airhacks.zsmith.Concern;
+import airhacks.zsmith.correlation.entity.Correlation;
 import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 
 @Concern(OBSERVABILITY)
@@ -47,4 +48,16 @@ public class ToolInvocationEvent extends Event {
 
     @Label("Result Size")
     public int resultSize;
+
+    /// The where-am-I half of the event: which agent, which turn, and which content block
+    /// requested the tool. Outcome, error type and result size are filled as the tool runs.
+    public static ToolInvocationEvent of(String agentName, Correlation correlation, ToolUse toolUse) {
+        var event = new ToolInvocationEvent();
+        event.agentName = agentName;
+        event.runId = correlation.runId();
+        event.iteration = correlation.iteration();
+        event.toolUseId = toolUse.id();
+        event.toolName = toolUse.name();
+        return event;
+    }
 }

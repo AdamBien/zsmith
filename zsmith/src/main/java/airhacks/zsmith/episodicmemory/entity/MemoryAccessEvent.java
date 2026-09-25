@@ -7,6 +7,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 import airhacks.zsmith.Concern;
+import airhacks.zsmith.correlation.entity.Correlation;
 import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 
 @Concern(OBSERVABILITY)
@@ -38,4 +39,14 @@ public class MemoryAccessEvent extends Event {
 
     @Label("Outcome")
     public String outcome;
+
+    /// The where-am-I half of the event: which run touched which store, and how. Episode
+    /// count, payload size and outcome are filled as the access plays out.
+    public static MemoryAccessEvent of(Correlation correlation, String store, String operation) {
+        var event = new MemoryAccessEvent();
+        event.runId = correlation.runId();
+        event.store = store;
+        event.operation = operation;
+        return event;
+    }
 }

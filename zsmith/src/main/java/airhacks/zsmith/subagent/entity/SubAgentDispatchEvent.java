@@ -7,6 +7,7 @@ import jdk.jfr.Label;
 import jdk.jfr.Name;
 
 import airhacks.zsmith.Concern;
+import airhacks.zsmith.correlation.entity.Correlation;
 import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 
 @Concern(OBSERVABILITY)
@@ -41,4 +42,17 @@ public class SubAgentDispatchEvent extends Event {
 
     @Label("Task Size")
     public int taskSize;
+
+    /// The where-am-I half of the event: which run delegates to which child, how deep in
+    /// the tree, and whether the child runs beside its siblings or one after another.
+    /// Outcome and task size are filled as the dispatch plays out.
+    public static SubAgentDispatchEvent of(String childAgent, Correlation correlation, boolean parallel, boolean firstRun) {
+        var event = new SubAgentDispatchEvent();
+        event.childAgent = childAgent;
+        event.runId = correlation.runId();
+        event.depth = correlation.depth();
+        event.mode = parallel ? "parallel" : "sequential";
+        event.firstRun = firstRun;
+        return event;
+    }
 }

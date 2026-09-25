@@ -1,5 +1,7 @@
 package airhacks.zsmith.skills.entity;
 
+import java.nio.file.Path;
+
 import jdk.jfr.Category;
 import jdk.jfr.Description;
 import jdk.jfr.Event;
@@ -27,4 +29,12 @@ public class SkillLoadEvent extends Event {
 
     @Label("Outcome")
     public String outcome;
+
+    /// The where-am-I half of the event: which file is being read. Name, size and outcome
+    /// are only known once the file has been parsed.
+    public static SkillLoadEvent of(Path skillFile) {
+        var event = new SkillLoadEvent();
+        event.path = skillFile.toString();
+        return event;
+    }
 }
