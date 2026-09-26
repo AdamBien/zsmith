@@ -68,22 +68,16 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
     }
 
     private Agent(String name, String systemPrompt, AgentDefaults defaults) {
+        var agentName = name != null ? name : defaults.name();
         this(
-                name != null ? name : defaults.name(),
-                resolveSystemPrompt(name != null ? name : defaults.name(), systemPrompt, defaults),
+                agentName,
+                SystemPromptLoader.resolve(ZCfg.APP_NAME, agentName, systemPrompt, defaults.systemPrompt()),
                 new Memory(),
                 new HashMap<>(),
                 defaults.maxIterations(),
                 defaults.temperature(),
                 null);
         ZCfg.loadNamedAgentConfig(this.name);
-    }
-
-    static String resolveSystemPrompt(String agentName, String fallback, AgentDefaults defaults) {
-        var prompt = SystemPromptLoader.load(ZCfg.APP_NAME, agentName);
-        if (prompt != null)
-            return prompt;
-        return fallback != null ? fallback : defaults.systemPrompt();
     }
 
     public Agent(String name) {
