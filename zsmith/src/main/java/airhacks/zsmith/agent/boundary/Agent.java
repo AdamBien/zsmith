@@ -1,7 +1,6 @@
 package airhacks.zsmith.agent.boundary;
 
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
@@ -47,7 +46,6 @@ import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
 import airhacks.zsmith.tools.boundary.ToolProfiles;
 import airhacks.zsmith.tools.control.LaunchAppTool;
 import airhacks.zsmith.tools.boundary.Tool;
-import airhacks.zsmith.tools.entity.ToolUse;
 import airhacks.zsmith.transcripts.boundary.TranscriptLog;
 import airhacks.zsmith.transcripts.entity.Transcript;
 
@@ -289,31 +287,26 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 progress.addLLMInvocation();
                 progress.update(iteration + 1, RunTally.runningTokens(run.runId()));
 
-                var content = response.getJSONArray("content");
-                var stopReason = response.optString("stop_reason", "end_turn");
-                turnEvent.stopReason = stopReason;
-
-                var textParts = extractTextContent(content);
-                var toolUses = extractToolUses(content);
+                turnEvent.stopReason = response.stopReason();
+                var toolUses = response.toolUses();
                 turnEvent.toolUseCount = toolUses.size();
-                if (!textParts.isEmpty()) {
-                    lastText = String.join("\n", textParts);
+                var text = response.text();
+                if (!text.isEmpty()) {
+                    lastText = text;
                 }
                 toolUses.forEach(tu -> toolCounts.merge(tu.name(), 1, Integer::sum));
 
-                if (toolUses.isEmpty() || !"tool_use".equals(stopReason)) {
+                if (!response.requestsTools()) {
                     turnEvent.terminal = true;
-                    exitReason = stopReason;
-                    if (!textParts.isEmpty()) {
-                        var assistantResponse = String.join("\n", textParts);
-                        this.memory.addAssistantMessage(assistantResponse);
-                        Log.answer(assistantResponse);
-                        return assistantResponse;
+                    exitReason = response.stopReason();
+                    if (!text.isEmpty()) {
+                        this.memory.addAssistantMessage(text);
+                        Log.answer(text);
                     }
-                    return "";
+                    return text;
                 }
 
-                addAssistantContentToMemory(content);
+                this.memory.addMessage(Message.withContentBlocks("assistant", response.content()));
 
                 var invocations = toolInvocations();
                 var plan = invocations.plan(toolUses);
@@ -399,31 +392,5 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
 
     public void clearMemory() {
         this.memory.clear();
-    }
-
-    List<String> extractTextContent(JSONArray content) {
-        var texts = new ArrayList<String>();
-        for (int i = 0; i < content.length(); i++) {
-            var block = content.getJSONObject(i);
-            if ("text".equals(block.optString("type"))) {
-                texts.add(block.getString("text"));
-            }
-        }
-        return texts;
-    }
-
-    List<ToolUse> extractToolUses(JSONArray content) {
-        var toolUses = new ArrayList<ToolUse>();
-        for (int i = 0; i < content.length(); i++) {
-            var block = content.getJSONObject(i);
-            if (ToolUse.isToolUse(block)) {
-                toolUses.add(ToolUse.fromJSON(block));
-            }
-        }
-        return toolUses;
-    }
-
-    void addAssistantContentToMemory(JSONArray content) {
-        this.memory.addMessage(Message.withContentBlocks("assistant", content));
     }
 }
