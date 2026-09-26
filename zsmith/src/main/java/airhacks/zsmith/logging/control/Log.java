@@ -180,6 +180,12 @@ public enum Log {
         Log.TOKENS.out(message);
     }
 
+    /// Shortens a value for a log line and says how much was cut, so a long tool input or
+    /// answer neither floods the console nor disappears without trace.
+    public static String truncate(String text, int max) {
+        return text.length() <= max ? text : text.substring(0, max) + "… (+%d chars)".formatted(text.length() - max);
+    }
+
     public static void clearScreen() {
         System.out.println("\033c");
     }

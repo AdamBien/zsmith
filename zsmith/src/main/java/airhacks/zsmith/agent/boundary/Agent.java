@@ -9,11 +9,10 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 import airhacks.zsmith.json.JSONArray;
 
+import airhacks.zsmith.agent.control.ToolInvocations;
 import airhacks.zsmith.agent.control.Version;
 import airhacks.zsmith.agent.entity.AgentDefaults;
 import airhacks.zsmith.agent.entity.AgentTurnEvent;
@@ -46,12 +45,8 @@ import airhacks.zsmith.systemprompt.control.SystemPromptLoader;
 import airhacks.zsmith.tools.boundary.SandboxTools;
 import airhacks.zsmith.tools.boundary.SandboxedFileSystem;
 import airhacks.zsmith.tools.boundary.ToolProfiles;
-import airhacks.zsmith.tools.control.Console;
 import airhacks.zsmith.tools.control.LaunchAppTool;
 import airhacks.zsmith.tools.boundary.Tool;
-import airhacks.zsmith.tools.control.ToolPermission;
-import airhacks.zsmith.tools.entity.ToolInvocationEvent;
-import airhacks.zsmith.tools.entity.ToolResult;
 import airhacks.zsmith.tools.entity.ToolUse;
 import airhacks.zsmith.transcripts.boundary.TranscriptLog;
 import airhacks.zsmith.transcripts.entity.Transcript;
@@ -262,105 +257,6 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 this.maxIterations, this.temperature, this.episodicMemory);
     }
 
-    /// Sorted by name so equal tool sets serialize byte-identically: the definitions render
-    /// at the very front of the cached prompt prefix, where a `HashMap`'s incidental order
-    /// would otherwise decide whether parallel sessions of the same agent share a cache entry.
-    JSONArray toolDefinitions() {
-        var array = new JSONArray();
-        this.tools.values().stream()
-                .sorted(Comparator.comparing(Tool::toolName))
-                .map(Tool::toToolDefinition)
-                .forEach(array::put);
-        return array;
-    }
-
-    /// Takes the correlation as an argument rather than reading it from the ambient scope:
-    /// parallel-capable tools are submitted to a virtual-thread executor, which does not
-    /// inherit scoped value bindings. It is re-bound around the tool body so that whatever
-    /// the tool reaches — episodic memory, a nested agent, another LLM call — records the
-    /// same run, on whichever thread it ends up.
-    ToolResult executeTool(ToolUse toolUse, Correlation correlation) {
-        var event = ToolInvocationEvent.of(this.name, correlation, toolUse);
-        event.begin();
-        try {
-            var tool = this.tools.get(toolUse.name());
-            if (tool == null) {
-                Log.tool("tool not available: " + toolUse.name());
-                event.outcome = "not_available";
-                return ToolResult.error(toolUse.id(), "Tool not available: " + toolUse.name());
-            }
-            var permission = ToolPermission.resolve(toolUse.name());
-            if (permission == ToolPermission.DENY) {
-                Log.tool("tool denied: " + toolUse.name());
-                event.outcome = "denied";
-                return ToolResult.error(toolUse.id(), "Denied: tool not permitted by agent configuration");
-            }
-            if (permission == ToolPermission.CONFIRM) {
-                var answer = Console.prompt("Allow " + toolUse.name() + " with " + toolUse.input() + "? (yes/always/no/never): ");
-                if ("always".equalsIgnoreCase(answer) || "a".equalsIgnoreCase(answer)) {
-                    ZCfg.storeAgentProperty(this.name, ToolPermission.PREFIX + toolUse.name(), "allow");
-                    Log.tool("tool permission persisted: " + toolUse.name() + " = allow");
-                } else if ("never".equalsIgnoreCase(answer)) {
-                    ZCfg.storeAgentProperty(this.name, ToolPermission.PREFIX + toolUse.name(), "deny");
-                    Log.tool("tool permission persisted: " + toolUse.name() + " = deny");
-                    event.outcome = "denied";
-                    return ToolResult.error(toolUse.id(), "Denied: user rejected tool execution (persisted)");
-                } else if (!"yes".equalsIgnoreCase(answer) && !"y".equalsIgnoreCase(answer)) {
-                    Log.tool("tool rejected by user: " + toolUse.name());
-                    event.outcome = "denied";
-                    return ToolResult.error(toolUse.id(), "Denied: user rejected tool execution");
-                }
-            }
-            try {
-                Log.tool("→ %s %s".formatted(toolUse.name(), truncate(String.valueOf(toolUse.input()), 200)));
-                var start = System.currentTimeMillis();
-                var result = ScopedValue.where(Correlations.CURRENT, correlation)
-                        .call(() -> tool.execute(toolUse.input()));
-                var duration = System.currentTimeMillis() - start;
-                Log.tool("← %s %s".formatted(toolUse.name(), result == null ? "<null>" : truncate(result, 200)));
-                Log.toolEnd("%s %dms".formatted(toolUse.name(), duration));
-                event.outcome = "success";
-                event.resultSize = result == null ? 0 : result.length();
-                return ToolResult.success(toolUse.id(), result);
-            } catch (Exception e) {
-                Log.tool("tool error: " + toolUse.name() + " — " + e.getMessage());
-                event.outcome = "error";
-                event.errorType = e.getClass().getSimpleName();
-                return ToolResult.error(toolUse.id(), e.getMessage());
-            }
-        } finally {
-            if (event.shouldCommit()) {
-                event.commit();
-            }
-        }
-    }
-
-    public String act() {
-        return chat("go");
-    }
-
-    /// The model name reported by the most recent LLM response — the model actually served,
-    /// which can differ from the configured one (529 fallback, lightmetal's own config).
-    /// `"unknown"` before the first chat / act invocation.
-    public String modelName() {
-        return LLM.servedModelName();
-    }
-
-    public String chat(String userMessage) {
-        Objects.requireNonNull(userMessage, "Chat requires a message, use act() for agentic workflows");
-        Log.prompt(userMessage);
-        this.memory.addUserMessage(userMessage);
-
-        var progress = new ProgressBar(this.maxIterations);
-        try {
-            return chatLoop(progress);
-        } catch (RuntimeException e) {
-            var summary = Errors.summarize(e);
-            Log.error(summary);
-            return summary;
-        }
-    }
-
     String chatLoop(ProgressBar progress) {
         /// Where output goes is settled before any is produced, so everything this run reports
         /// lands in one place. Both are declined for a sub-agent: the loop already running owns
@@ -419,37 +315,11 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
 
                 addAssistantContentToMemory(content);
 
-                var toolResults = new JSONArray();
-                var parallelTools = toolUses.stream()
-                        .filter(tu -> {
-                            var tool = this.tools.get(tu.name());
-                            return tool != null && tool.parallel();
-                        })
-                        .toList();
-                var sequentialTools = toolUses.stream()
-                        .filter(tu -> !parallelTools.contains(tu))
-                        .toList();
-                turnEvent.parallelToolCount = parallelTools.size();
-                turnEvent.sequentialToolCount = sequentialTools.size();
-
-                if (!parallelTools.isEmpty()) {
-                    try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                        var futures = parallelTools.stream()
-                                .map(tu -> Map.entry(tu, executor.submit(() -> executeTool(tu, correlation))))
-                                .toList();
-                        for (var entry : futures) {
-                            try {
-                                toolResults.put(entry.getValue().get().toContentBlock());
-                            } catch (Exception e) {
-                                toolResults.put(ToolResult.error(entry.getKey().id(), e.getMessage()).toContentBlock());
-                            }
-                        }
-                    }
-                }
-                for (var toolUse : sequentialTools) {
-                    var result = executeTool(toolUse, correlation);
-                    toolResults.put(result.toContentBlock());
-                }
+                var invocations = toolInvocations();
+                var plan = invocations.plan(toolUses);
+                turnEvent.parallelToolCount = plan.parallel().size();
+                turnEvent.sequentialToolCount = plan.sequential().size();
+                var toolResults = invocations.execute(plan, correlation);
                 progress.addToolInvocations(toolUses.size());
                 var message = Message.withContentBlocks("user", toolResults);
                 this.memory.addMessage(message);
@@ -466,11 +336,53 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             Log.agent("loop end (%s) memory=%d messages tool_counts=%s"
                     .formatted(exitReason, this.memory.size(), toolCounts));
             if (lastText != null) {
-                Log.agent("last assistant text: " + truncate(lastText, 500));
+                Log.agent("last assistant text: " + Log.truncate(lastText, 500));
             }
             storeTranscript(run.runId(), exitReason, turns);
             progress.summary(RunTally.runningTokens(run.runId()));
             RunTally.discard(run.runId());
+        }
+    }
+
+    /// Sorted by name so equal tool sets serialize byte-identically: the definitions render
+    /// at the very front of the cached prompt prefix, where a `HashMap`'s incidental order
+    /// would otherwise decide whether parallel sessions of the same agent share a cache entry.
+    JSONArray toolDefinitions() {
+        var array = new JSONArray();
+        this.tools.values().stream()
+                .sorted(Comparator.comparing(Tool::toolName))
+                .map(Tool::toToolDefinition)
+                .forEach(array::put);
+        return array;
+    }
+
+    ToolInvocations toolInvocations() {
+        return new ToolInvocations(this.name, this.tools);
+    }
+
+    public String act() {
+        return chat("go");
+    }
+
+    /// The model name reported by the most recent LLM response — the model actually served,
+    /// which can differ from the configured one (529 fallback, lightmetal's own config).
+    /// `"unknown"` before the first chat / act invocation.
+    public String modelName() {
+        return LLM.servedModelName();
+    }
+
+    public String chat(String userMessage) {
+        Objects.requireNonNull(userMessage, "Chat requires a message, use act() for agentic workflows");
+        Log.prompt(userMessage);
+        this.memory.addUserMessage(userMessage);
+
+        var progress = new ProgressBar(this.maxIterations);
+        try {
+            return chatLoop(progress);
+        } catch (RuntimeException e) {
+            var summary = Errors.summarize(e);
+            Log.error(summary);
+            return summary;
         }
     }
 
@@ -483,10 +395,6 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         }
         TranscriptLog.forAgent(this.name)
                 .save(Transcript.of(runId, this.name, exitReason, turns, this.memory.toJSON().toString()));
-    }
-
-    static String truncate(String text, int max) {
-        return text.length() <= max ? text : text.substring(0, max) + "… (+%d chars)".formatted(text.length() - max);
     }
 
     public void clearMemory() {
