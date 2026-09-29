@@ -1,5 +1,7 @@
 package airhacks.zsmith.htmldb.boundary;
 
+import static airhacks.zsmith.htmldb.Requirement.Rn.*;
+
 import java.io.IOException;
 import java.io.UncheckedIOException;
 import java.nio.file.Files;
@@ -10,6 +12,7 @@ import java.util.Optional;
 import java.util.SortedMap;
 import java.util.regex.Pattern;
 
+import airhacks.zsmith.htmldb.Requirement;
 import airhacks.zsmith.htmldb.control.XHtmlPage;
 import airhacks.zsmith.htmldb.entity.Entry;
 
@@ -30,10 +33,11 @@ public record HtmlStore(Path root) {
     /// Names the database after the folder holding it — the heading and breadcrumb
     /// target of the generated navigation.
     String title() {
-        return this.root.getFileName().toString();
+        return this.root.toAbsolutePath().normalize().getFileName().toString();
     }
 
     /// Replaces the record under `key`, creating the table if needed.
+    @Requirement({ R2_1, R2_2, R2_3, R2_4, R2_5, R7_1, R7_3 })
     public void put(String table, String key, SortedMap<String, String> fields) {
         validate(table, "table");
         validate(key, "key");
@@ -47,6 +51,7 @@ public record HtmlStore(Path root) {
     /// that key already exists, and answers the key it ended up under. Keeps
     /// appends from silently overwriting each other when keys are derived from a
     /// coarse timestamp.
+    @Requirement({ R3_1, R3_2, R3_3 })
     public String append(String table, String key, SortedMap<String, String> fields) {
         validate(table, "table");
         validate(key, "key");
@@ -58,7 +63,10 @@ public record HtmlStore(Path root) {
         return unique;
     }
 
+    @Requirement({ R4_1, R4_2, R4_7 })
     public Optional<Entry> get(String table, String key) {
+        validate(table, "table");
+        validate(key, "key");
         var page = recordPage(table, key);
         if (!Files.isRegularFile(page)) {
             return Optional.empty();
@@ -68,25 +76,27 @@ public record HtmlStore(Path root) {
 
     /// Answers the keys of the table in ascending order, or nothing at all for a
     /// table that does not exist yet.
+    @Requirement({ R4_3, R4_5, R4_6 })
     public List<String> keys(String table) {
-        var folder = this.root.resolve(table);
-        if (!Files.isDirectory(folder)) {
-            return List.of();
-        }
-        return names(folder).stream()
+        validate(table, "table");
+        return contentOf(this.root.resolve(table)).stream()
                 .filter(HtmlStore::isRecordPage)
                 .map(HtmlStore::keyOf)
                 .sorted()
                 .toList();
     }
 
+    @Requirement({ R4_4, R4_5, R4_7 })
     public List<Entry> list(String table) {
         return keys(table).stream()
                 .map(key -> new Entry(key, XHtmlPage.fields(recordPage(table, key))))
                 .toList();
     }
 
+    @Requirement({ R5_1, R5_2 })
     public boolean remove(String table, String key) {
+        validate(table, "table");
+        validate(key, "key");
         var page = recordPage(table, key);
         if (!Files.isRegularFile(page)) {
             return false;
@@ -97,7 +107,9 @@ public record HtmlStore(Path root) {
         return true;
     }
 
+    @Requirement({ R5_3, R5_4 })
     public void removeTable(String table) {
+        validate(table, "table");
         var folder = this.root.resolve(table);
         if (!Files.isDirectory(folder)) {
             return;
@@ -109,6 +121,7 @@ public record HtmlStore(Path root) {
         updateRootIndex();
     }
 
+    @Requirement({ R6_1, R6_2 })
     public List<String> tables() {
         return contentOf(this.root).stream()
                 .filter(Files::isDirectory)
@@ -118,11 +131,13 @@ public record HtmlStore(Path root) {
                 .toList();
     }
 
+    @Requirement({ R7_2, R7_3 })
     void updateTableIndex(String table) {
         atomicWrite(this.root.resolve(table).resolve(XHtmlPage.INDEX_PAGE),
                 XHtmlPage.tableIndex(table, title(), keys(table)));
     }
 
+    @Requirement({ R7_2, R7_4 })
     void updateRootIndex() {
         atomicWrite(this.root.resolve(XHtmlPage.INDEX_PAGE), XHtmlPage.rootIndex(title(), tables()));
     }
@@ -154,12 +169,6 @@ public record HtmlStore(Path root) {
         }
     }
 
-    List<String> names(Path folder) {
-        return contentOf(folder).stream()
-                .map(path -> path.getFileName().toString())
-                .toList();
-    }
-
     void delete(Path path) {
         try {
             Files.deleteIfExists(path);
@@ -177,21 +186,37 @@ public record HtmlStore(Path root) {
     }
 
     static boolean isTable(Path folder) {
-        return Files.isRegularFile(folder.resolve(XHtmlPage.INDEX_PAGE));
+        return isName(folder.getFileName().toString())
+                && Files.isRegularFile(folder.resolve(XHtmlPage.INDEX_PAGE));
     }
 
-    static boolean isRecordPage(String fileName) {
-        return fileName.endsWith(XHtmlPage.PAGE_SUFFIX) && !fileName.equals(XHtmlPage.INDEX_PAGE);
+    /// A record page is a file named after a key. Whatever else lives in the table
+    /// folder — the generated index, a temporary file, foreign content — is not a
+    /// record and could not be addressed by a key anyway.
+    static boolean isRecordPage(Path page) {
+        return page.getFileName().toString().endsWith(XHtmlPage.PAGE_SUFFIX)
+                && isName(keyOf(page))
+                && Files.isRegularFile(page);
     }
 
-    static String keyOf(String fileName) {
+    static String keyOf(Path page) {
+        var fileName = page.getFileName().toString();
         return fileName.substring(0, fileName.length() - XHtmlPage.PAGE_SUFFIX.length());
+    }
+
+    static boolean matchesGrammar(String name) {
+        return name != null && NAME.matcher(name).matches();
+    }
+
+    static boolean isName(String name) {
+        return matchesGrammar(name) && !RESERVED_NAME.equals(name);
     }
 
     /// Table and key names become folder and file names, so they are restricted to
     /// a filename-safe grammar; `index` is reserved for the generated navigation.
+    @Requirement({ R1_1, R1_2, R1_3, R1_4 })
     static void validate(String name, String kind) {
-        if (name == null || !NAME.matcher(name).matches()) {
+        if (!matchesGrammar(name)) {
             throw new IllegalArgumentException("invalid %s name: %s (allowed: letters, digits, _ and -)".formatted(kind, name));
         }
         if (RESERVED_NAME.equals(name)) {

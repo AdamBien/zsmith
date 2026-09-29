@@ -45,13 +45,19 @@ public interface XHtmlPage {
         return page(title, "", navigation(links));
     }
 
-    /// Reconstructs a record by pairing the `dt` and `dd` elements of the page.
+    /// Reconstructs a record by pairing the `dt` and `dd` elements of the page. A
+    /// name without a value, or the reverse, would shift every pair after it, so
+    /// such a page is refused rather than read wrongly.
     static SortedMap<String, String> fields(Path page) {
         var document = parse(page);
         var names = document.getElementsByTagName("dt");
         var values = document.getElementsByTagName("dd");
+        if (names.getLength() != values.getLength()) {
+            throw new IllegalStateException("malformed page %s: %d field names but %d values"
+                    .formatted(page, names.getLength(), values.getLength()));
+        }
         var fields = new TreeMap<String, String>();
-        for (var index = 0; index < Math.min(names.getLength(), values.getLength()); index++) {
+        for (var index = 0; index < names.getLength(); index++) {
             fields.put(names.item(index).getTextContent(), values.item(index).getTextContent());
         }
         return fields;
