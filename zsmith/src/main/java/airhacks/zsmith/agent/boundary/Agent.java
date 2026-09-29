@@ -260,6 +260,9 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
         /// sub-agent is running, which is what links a child run back into the tree.
         var parent = Correlations.current();
         var run = Correlation.start(parent);
+        /// The message that started this loop is recorded already, so anything beyond it is
+        /// an earlier exchange.
+        var continued = this.memory.size() > 1;
         String lastText = null;
         String exitReason = "max_iterations";
         int turns = 0;
@@ -270,7 +273,7 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
             var turnEvent = AgentTurnEvent.of(this.name, correlation, parent);
             turnEvent.begin();
             try {
-                var toolChoice = ToolChoice.forTurn(iteration);
+                var toolChoice = ToolChoice.forTurn(iteration, continued, hasWorkingTools());
                 var response = ScopedValue.where(Correlations.CURRENT, correlation)
                         .call(() -> LLM.invoke(
                                 this.systemPrompt,
@@ -341,6 +344,13 @@ public record Agent(String name, String systemPrompt, Memory memory, Map<String,
                 .map(Tool::toToolDefinition)
                 .forEach(array::put);
         return array;
+    }
+
+    /// The improvement report is a side channel: it says something about the instructions
+    /// and does nothing for the task, so it is no tool to open a conversation with.
+    boolean hasWorkingTools() {
+        return this.tools.values().stream()
+                .anyMatch(tool -> !(tool instanceof ReportImprovementTool));
     }
 
     ToolInvocations toolInvocations() {

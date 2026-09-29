@@ -176,6 +176,11 @@ An agent whose first move is meant to be a question dies on turn one when the mo
 
 Only the opening turn is forced. Demanding a tool call on every turn would remove the agent loop's sole exit condition and leave it running to `maxIterations`. Requests carrying no tools are untouched, since both APIs reject `tool_choice` on its own.
 
+Two openings are left to the model:
+
+- A continued conversation: a subagent delegated to a second time, or a session on its next message. The tool choice is part of what the prompt cache is keyed on, so forcing it for one turn re-writes every earlier message at write price. See [what invalidates the cache](https://docs.claude.com/en/docs/build-with-claude/prompt-caching).
+- An agent whose only tool is `report_improvement`. Forced to call something, it reports an improvement nobody noticed, and the answer costs a second turn.
+
 Switch it off for an endpoint that does not accept the field, or for an agent whose first answer is legitimately prose:
 
 ```properties
@@ -879,6 +884,8 @@ Keep it off for agents in steady use: a tool definition ships with every request
 Agents can delegate tasks to other agents via `withSubAgent()`. The child agent becomes a callable tool (`delegate_to_<name>`).
 
 By default, multiple `withSubAgent()` invocations run in parallel, but the **first successful run of each subagent is forced sequential** so that any `confirm`-level tool permission prompts appear cleanly one at a time on stdout/stdin instead of colliding across virtual threads. Once a subagent has completed once, a marker is written to `~/.zsmith/<subAgentName>/.first_run_completed` and subsequent runs fan out in parallel. Use `withSequentialSubAgent()` to opt out of parallelism entirely; delete the marker file to force another sequential warm-up.
+
+A delegation returns everything the subagent wrote while working on it, in order, and not only its closing reply. A subagent that writes its result in the same turn as a tool call considers it delivered, and its closing turn is a recap. The subagent keeps its conversation between delegations; a later delegation returns only what was written for it.
 
 Podcast transcription example: the coordinator asks for the transcript path, reads the file, delegates link verification, stores guests and links in memory, and copies the result to the clipboard:
 

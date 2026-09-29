@@ -35,6 +35,9 @@
 /// - R2.12 — When the loop ends, the BC shall discard the run's tally. _(why: a served agent runs many conversations in one process, and a tally kept per run it ever ran never stops growing)_
 /// - R2.13 — When a conversation loop begins, the BC shall request event capture under that agent's name. _(why: the loop is the earliest point that knows which agent a run belongs to — a sub-agent is constructed before the parent that delegates to it, so construction order names the wrong one)_
 /// - R2.14 — When a conversation loop begins, the BC shall direct its diagnostics under that agent's name. _(why: same reason as the capture it sits beside — the loop is the first point that knows which agent a run belongs to, and a sub-agent is constructed before the parent that delegates to it)_
+/// - R2.15 — When a conversation opens, the BC shall demand a tool call on the first turn and leave every later turn to the model, unless configuration switches the demand off. _(why: a first move written as prose instead of a tool call ends the session in a way that reads as a crash, and a demand on every turn removes the loop's only exit)_
+/// - R2.16 — While a conversation is continued, the BC shall leave the first turn of the next message to the model. _(why: the tool choice is part of what the prompt cache is keyed on, so a demand for one turn re-writes every earlier message at write price)_
+/// - R2.17 — While the improvement report is the only registered tool, the BC shall leave the first turn to the model. _(why: a demand that only a side channel can meet is met by reporting an improvement nobody noticed, and the answer costs a second turn)_
 ///
 /// ### R3: Execute tools
 /// - R3.1 — If a requested tool is not registered, then the BC shall answer the request with an error result.

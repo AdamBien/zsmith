@@ -3,6 +3,9 @@ package airhacks.zsmith.subagent.control;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.stream.Collectors;
 
 import airhacks.zsmith.json.JSONObject;
 
@@ -10,6 +13,7 @@ import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.logging.control.Log;
+import airhacks.zsmith.memory.entity.Message;
 import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.tools.boundary.Tool;
 
@@ -102,12 +106,14 @@ public class SubAgentTool implements Tool {
             event.taskSize = task.length();
             Log.subagent("delegating to sub-agent '%s': %s".formatted(this.subAgent.name(), task));
             try {
-                var result = ScopedValue.where(Correlations.CURRENT, correlation.deeper())
+                var conversation = this.subAgent.memory().messages();
+                var opening = conversation.size();
+                var answer = ScopedValue.where(Correlations.CURRENT, correlation.deeper())
                         .call(() -> this.subAgent.chat(task));
                 Log.subagent("sub-agent '%s' completed".formatted(this.subAgent.name()));
                 markFirstRunCompleted();
                 event.outcome = "success";
-                return result;
+                return replies(conversation.subList(opening, conversation.size()), answer);
             } catch (Exception e) {
                 event.outcome = "error";
                 return "Error: Sub-agent '%s' failed: %s".formatted(this.subAgent.name(), e.getMessage());
@@ -117,6 +123,27 @@ public class SubAgentTool implements Tool {
                 event.commit();
             }
         }
+    }
+
+    /// Everything the sub-agent wrote during one delegation, in the order it was written,
+    /// closed by its answer. A sub-agent that writes its result in the same turn as a tool
+    /// call considers it delivered, and what follows in the closing turn is a recap. The
+    /// recap alone costs the caller a second delegation to ask for what was already written.
+    ///
+    /// The answer is appended when the conversation does not hold it: a loop that ran out of
+    /// iterations or failed says so in its return value only.
+    static String replies(List<Message> delegation, String answer) {
+        var replies = delegation.stream()
+                .filter(message -> "assistant".equals(message.role()))
+                .map(Message::text)
+                .filter(text -> !text.isBlank())
+                .collect(Collectors.toCollection(ArrayList::new));
+        var closing = answer == null ? "" : answer;
+        var recorded = !replies.isEmpty() && replies.getLast().equals(closing);
+        if (!recorded && !closing.isBlank()) {
+            replies.add(closing);
+        }
+        return String.join("\n\n", replies);
     }
 
     boolean firstRunCompleted() {

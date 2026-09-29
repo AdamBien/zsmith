@@ -9,24 +9,33 @@ void main() {
     ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
 
     demandsAToolCallOnlyOnTheOpeningTurn();
+    leavesTheOpeningToTheModelWhereTheDemandCosts();
     rendersBothWireFormats();
     leavesToollessRequestsAlone();
 }
 
 /// Demanding a tool call on every turn would remove the agent loop's only exit.
 void demandsAToolCallOnlyOnTheOpeningTurn() {
-    assert ToolChoice.required == ToolChoice.forTurn(0) : "the opening turn demands a tool call by default";
-    assert ToolChoice.auto == ToolChoice.forTurn(1) : "later turns must stay auto, or the loop never ends";
+    assert ToolChoice.required == ToolChoice.forTurn(0, false, true) : "the opening turn demands a tool call by default";
+    assert ToolChoice.auto == ToolChoice.forTurn(1, false, true) : "later turns must stay auto, or the loop never ends";
 
     // the escape hatch, for endpoints that do not accept tool_choice
     System.setProperty(ToolChoice.REQUIRE_FIRST_KEY, "false");
     ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
     try {
-        assert ToolChoice.auto == ToolChoice.forTurn(0) : "the property should switch the demand off";
+        assert ToolChoice.auto == ToolChoice.forTurn(0, false, true) : "the property should switch the demand off";
     } finally {
         System.clearProperty(ToolChoice.REQUIRE_FIRST_KEY);
         ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
     }
+}
+
+/// A changed tool choice re-writes the cached conversation, and a side channel is no opening move.
+void leavesTheOpeningToTheModelWhereTheDemandCosts() {
+    assert ToolChoice.auto == ToolChoice.forTurn(0, true, true)
+            : "a continued conversation must keep the tool choice its cached messages were written under";
+    assert ToolChoice.auto == ToolChoice.forTurn(0, false, false)
+            : "without a working tool there is nothing to demand";
 }
 
 void rendersBothWireFormats() {

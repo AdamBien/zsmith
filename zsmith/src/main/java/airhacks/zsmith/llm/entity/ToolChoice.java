@@ -26,8 +26,19 @@ public enum ToolChoice {
     /// crash. With it, an endpoint that does not accept `tool_choice` answers with an error
     /// naming the field, and [#REQUIRE_FIRST_KEY] turns it off. Requests that carry no tools
     /// never reach this decision.
-    public static ToolChoice forTurn(int iteration) {
-        var required = iteration == 0 && ZCfg.bool(REQUIRE_FIRST_KEY, true);
+    ///
+    /// Two openings are left to the model even so:
+    ///
+    /// - A continued conversation — a sub-agent delegated to a second time, a session on its
+    ///   next message. The tool choice is part of what the prompt cache is keyed on, so
+    ///   demanding a tool for one turn re-writes every message before it at write price.
+    /// - An agent with no working tool. Left with a side channel only, the demand is met
+    ///   by reporting an improvement nobody noticed, and the answer costs a second turn.
+    ///
+    /// - [What invalidates the cache](https://docs.claude.com/en/docs/build-with-claude/prompt-caching)
+    public static ToolChoice forTurn(int iteration, boolean continued, boolean workingTools) {
+        var opening = iteration == 0 && !continued && workingTools;
+        var required = opening && ZCfg.bool(REQUIRE_FIRST_KEY, true);
         return required ? ToolChoice.required : auto;
     }
 }

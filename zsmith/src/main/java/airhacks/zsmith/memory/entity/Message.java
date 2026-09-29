@@ -1,5 +1,7 @@
 package airhacks.zsmith.memory.entity;
 
+import java.util.ArrayList;
+
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
 
@@ -15,6 +17,25 @@ public record Message(String role, Object content) {
             json.put("content", this.content);
         }
         return json;
+    }
+
+    /// The prose of this message: the string itself, or its text blocks joined with newlines.
+    /// Empty for a message that consists of tool calls or tool results only.
+    public String text() {
+        if (this.content instanceof String plain) {
+            return plain;
+        }
+        if (!(this.content instanceof JSONArray blocks)) {
+            return "";
+        }
+        var texts = new ArrayList<String>();
+        for (int i = 0; i < blocks.length(); i++) {
+            var block = blocks.optJSONObject(i);
+            if (block != null && "text".equals(block.optString("type"))) {
+                texts.add(block.optString("text"));
+            }
+        }
+        return String.join("\n", texts);
     }
 
     public static Message fromJSON(JSONObject json) {
