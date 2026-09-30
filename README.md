@@ -885,6 +885,8 @@ Agents can delegate tasks to other agents via `withSubAgent()`. The child agent 
 
 By default, multiple `withSubAgent()` invocations run in parallel, but the **first successful run of each subagent is forced sequential** so that any `confirm`-level tool permission prompts appear cleanly one at a time on stdout/stdin instead of colliding across virtual threads. Once a subagent has completed once, a marker is written to `~/.zsmith/<subAgentName>/.first_run_completed` and subsequent runs fan out in parallel. Use `withSequentialSubAgent()` to opt out of parallelism entirely; delete the marker file to force another sequential warm-up.
 
+Tools of one turn that are not parallel-capable run in order on the calling thread while the parallel ones work. A `user_question` asked in the same turn as a delegation is answered while the subagent is still working, and the turn ends when both are done. Questions are asked one at a time: a second prompt waits until the first is answered.
+
 A delegation returns everything the subagent wrote while working on it, in order, and not only its closing reply. A subagent that writes its result in the same turn as a tool call considers it delivered, and its closing turn is a recap. The subagent keeps its conversation between delegations; a later delegation returns only what was written for it.
 
 Podcast transcription example: the coordinator asks for the transcript path, reads the file, delegates link verification, stores guests and links in memory, and copies the result to the clipboard:

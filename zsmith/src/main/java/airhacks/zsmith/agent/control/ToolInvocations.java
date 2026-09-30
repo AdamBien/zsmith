@@ -19,7 +19,7 @@ import airhacks.zsmith.tools.entity.ToolUse;
 
 /// Executes the tool uses of one turn on behalf of the named agent: resolves permission,
 /// asks the user where configuration says so, runs parallel-capable tools concurrently
-/// and the rest in order, and turns every outcome into a result the LLM can read.
+/// and the rest in order beside them, and turns every outcome into a result the LLM can read.
 public record ToolInvocations(String agentName, Map<String, Tool> tools) {
 
     /// The tool uses of one turn split by how they may run. A tool that is not registered
@@ -40,26 +40,30 @@ public record ToolInvocations(String agentName, Map<String, Tool> tools) {
         return new Plan(parallel, sequential);
     }
 
+    /// The sequential tools run in order on the calling thread while the parallel ones are
+    /// working, and the turn ends when both are done. A question to the user asked in the same
+    /// turn as a delegation is answered while the sub-agent works, where waiting for the
+    /// sub-agent first would add the time the user takes to the time the sub-agent took.
+    ///
     /// Results arrive in plan order — parallel first, then sequential — so the content block
     /// the LLM receives is stable regardless of which worker finished first.
     public JSONArray execute(Plan plan, Correlation correlation) {
         var results = new JSONArray();
-        if (!plan.parallel().isEmpty()) {
-            try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
-                var futures = plan.parallel().stream()
-                        .map(toolUse -> Map.entry(toolUse, executor.submit(() -> execute(toolUse, correlation))))
-                        .toList();
-                for (var entry : futures) {
-                    try {
-                        results.put(entry.getValue().get().toContentBlock());
-                    } catch (Exception e) {
-                        results.put(ToolResult.error(entry.getKey().id(), e.getMessage()).toContentBlock());
-                    }
+        try (ExecutorService executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            var working = plan.parallel().stream()
+                    .map(toolUse -> Map.entry(toolUse, executor.submit(() -> execute(toolUse, correlation))))
+                    .toList();
+            var inOrder = plan.sequential().stream()
+                    .map(toolUse -> execute(toolUse, correlation))
+                    .toList();
+            for (var entry : working) {
+                try {
+                    results.put(entry.getValue().get().toContentBlock());
+                } catch (Exception e) {
+                    results.put(ToolResult.error(entry.getKey().id(), e.getMessage()).toContentBlock());
                 }
             }
-        }
-        for (var toolUse : plan.sequential()) {
-            results.put(execute(toolUse, correlation).toContentBlock());
+            inOrder.forEach(result -> results.put(result.toContentBlock()));
         }
         return results;
     }

@@ -47,6 +47,7 @@
 /// - R3.5 — When several parallel-capable tools are requested in one turn, the BC shall execute them concurrently and the remaining tools sequentially.
 /// - R3.6 — When a tool is executed, the BC shall record the run, the iteration, and the requesting tool-use identifier on the invocation event, and the failure type when the tool throws. _(why: an outcome of error says a run went wrong, not in what way)_
 /// - R3.7 — When a tool is executed concurrently, the BC shall make the run identifier available to what the tool itself invokes. _(why: a scoped binding does not cross an executor, so nested memory, LLM and sub-agent events would leave the run)_
+/// - R3.8 — While parallel-capable tools of a turn are running, the BC shall run the turn's sequential tools, and shall return the turn's results once both are done. _(why: a question to the user asked beside a delegation would otherwise wait for the sub-agent, adding the time the user takes to the time the sub-agent took)_
 ///
 /// ### R4: Equip capabilities
 /// - R4.1 — When a tool is registered, the BC shall expose its definition to the LLM on every invocation.
