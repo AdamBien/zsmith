@@ -1,5 +1,6 @@
 package airhacks.zsmith.claude.control;
 
+import java.time.Duration;
 import java.util.Set;
 
 import airhacks.zsmith.configuration.control.ZCfg;
@@ -31,6 +32,7 @@ public interface CacheControl {
 
     String ENABLED_KEY = "claude.cache";
     String TTL_KEY = "claude.cache.ttl";
+    Duration DEFAULT_TTL = Duration.ofMinutes(5);
 
     /// Block types the API accepts a `cache_control` marker on.
     Set<String> CACHEABLE_TYPES = Set.of("text", "image", "tool_use", "tool_result", "document");
@@ -105,6 +107,20 @@ public interface CacheControl {
 
     private static JSONObject shallowCopy(JSONObject original) {
         return new JSONObject(original, JSONObject.getNames(original));
+    }
+
+    /// How long the entries this request writes will live: what `claude.cache.ttl` asks for,
+    /// the API's five minutes where it asks for nothing or for something the API does not
+    /// offer, and zero with caching off. Recorded with every call, because whether a pause
+    /// outlived the cache can only be judged against the time to live the run was given.
+    static Duration timeToLive() {
+        if (!enabled()) {
+            return Duration.ZERO;
+        }
+        return switch (ZCfg.string(TTL_KEY, "")) {
+            case "1h" -> Duration.ofHours(1);
+            default -> DEFAULT_TTL;
+        };
     }
 
     /// Default TTL is five minutes; `claude.cache.ttl=1h` keeps entries alive across

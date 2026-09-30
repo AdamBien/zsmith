@@ -9,14 +9,22 @@ import java.time.Instant;
 /// cost and the wrong one for why: a run that read 1.2M cached tokens and re-created 200K looks
 /// identical whether the re-creation was four sub-agents starting cold or one prefix expiring
 /// mid-conversation. Only the sequence tells those apart, so the sequence is kept.
+///
+/// `cacheTtl` is how long the prefix this call wrote stays cached, as the call recorded it. Zero
+/// where the recording carries none: it was written before the field existed, or with caching off.
 public record Call(String runId, Instant started, Instant ended, int iteration,
-        int cacheRead, int cacheCreation) {
+        int cacheRead, int cacheCreation, Duration cacheTtl) {
 
     /// The idle stretch between the previous call of this run finishing and this one starting.
     /// Measured within a run, never across runs: a parent waiting on a delegated sub-agent is not
     /// idle, and its own calls are the only ones whose spacing decides whether its prefix survived.
     public Duration since(Call previous) {
         return Duration.between(previous.ended(), this.started);
+    }
+
+    /// Whether the call says how long its prefix lives, or leaves it to be assumed.
+    public boolean knowsCacheTtl() {
+        return this.cacheTtl.isPositive();
     }
 
     /// A first call has nothing cached by definition, which is why a run's first call can never be

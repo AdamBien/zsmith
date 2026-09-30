@@ -13,6 +13,7 @@ void main() {
     skipsUncacheableTrailingBlocks();
     respectsTheKillSwitch();
     carriesTheConfiguredTtl();
+    reportsTheTtlItWrites();
 }
 
 /// The system block's marker caches tools + system together — tools render first,
@@ -101,6 +102,27 @@ void carriesTheConfiguredTtl() {
         assert "1h".equals(marker.getString("ttl")) : "configured TTL must ride the marker, got: " + marker;
     } finally {
         System.clearProperty(CacheControl.TTL_KEY);
+        ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
+    }
+}
+
+/// What the analyzer judges an idle gap against, so it has to match what the markers ask for.
+void reportsTheTtlItWrites() {
+    assert java.time.Duration.ofMinutes(5).equals(CacheControl.timeToLive()) : "unset means the API default";
+    System.setProperty(CacheControl.TTL_KEY, "1h");
+    ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
+    try {
+        assert java.time.Duration.ofHours(1).equals(CacheControl.timeToLive()) : "1h must be reported as an hour";
+    } finally {
+        System.clearProperty(CacheControl.TTL_KEY);
+        ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
+    }
+    System.setProperty(CacheControl.ENABLED_KEY, "false");
+    ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
+    try {
+        assert java.time.Duration.ZERO.equals(CacheControl.timeToLive()) : "nothing cached lives for no time";
+    } finally {
+        System.clearProperty(CacheControl.ENABLED_KEY);
         ZCfg.loadBaseConfig("zsmith-test-" + ProcessHandle.current().pid());
     }
 }

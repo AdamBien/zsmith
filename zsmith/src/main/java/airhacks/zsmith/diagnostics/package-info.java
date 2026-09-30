@@ -22,6 +22,7 @@
 /// - R2.6 — The BC shall report a run's retries and its tool failures, keyed by what went wrong when there were any.
 /// - R2.7 — The BC shall report a run that never reached a terminal turn as incomplete.
 /// - R2.8 — The BC shall report a delegated run's cost against that run and shall not add it to the run that dispatched it. _(why: folding a child's spend into its parent would leave neither number the cost of anything)_
+/// - R2.9 — The BC shall judge a gap against the cache time to live the call before it recorded, and where none was recorded against the API default, saying that it assumed it. _(why: a run given an hour is not blocked too long after six minutes, and a verdict resting on an assumption has to show it)_
 ///
 /// ## Entities
 /// - Finding — one judgement about a run, with the measurements it rests on

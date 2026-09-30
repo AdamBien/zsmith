@@ -54,6 +54,10 @@ public class ClaudeAPICallEvent extends Event {
     @Label("Cache Creation Tokens")
     public int cacheCreationTokens;
 
+    @Label("Cache TTL Seconds")
+    @Description("How long the prefix this call wrote stays in the prompt cache, 0 with caching off")
+    public int cacheTtlSeconds;
+
     /// The where-am-I half of the event: which turn is calling, which model, and which
     /// attempt this is. Status, stop reason and token counts arrive with the response.
     public static ClaudeAPICallEvent of(Correlation correlation, String model, int attempt) {

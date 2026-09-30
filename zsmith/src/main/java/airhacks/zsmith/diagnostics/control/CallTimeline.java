@@ -1,5 +1,6 @@
 package airhacks.zsmith.diagnostics.control;
 
+import java.time.Duration;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
@@ -109,7 +110,8 @@ public class CallTimeline implements Consumer<RecordedEvent> {
         synchronized void addCall(RecordedEvent event) {
             this.calls.add(new Call(this.runId, event.getStartTime(), event.getEndTime(),
                     number(event, "iteration"), number(event, "cacheReadTokens"),
-                    number(event, "cacheCreationTokens")));
+                    number(event, "cacheCreationTokens"),
+                    Duration.ofSeconds(number(event, "cacheTtlSeconds"))));
         }
 
         synchronized void addToolCall(RecordedEvent event) {

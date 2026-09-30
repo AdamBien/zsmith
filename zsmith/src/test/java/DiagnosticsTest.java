@@ -29,6 +29,7 @@ void main() {
     reportsAReCreatedPrefix();
     neverReportsAFirstCallAsExpired();
     reportsAnIdleGap();
+    judgesTheGapByTheRecordedTtl();
     namesWhatFilledTheGap();
     reportsWhatEachToolCarried();
     ranksByWhatWasCarriedNotByResultSize();
@@ -83,6 +84,38 @@ void reportsAnIdleGap() {
         throw new AssertionError("R2.2 — the gap must be measured, not just named: " + gap);
     if (!gap.evidence().contains("idle"))
         throw new AssertionError("R2.2 — a gap no tool covers is the run doing nothing: " + gap);
+}
+
+// R2.9 — a run given an hour is not blocked too long after six minutes, and a verdict resting on
+// the default time to live says so.
+void judgesTheGapByTheRecordedTtl() {
+    var sixMinutesLater = NOON.plusSeconds(2).plus(Duration.ofMinutes(6));
+    var anHour = diagnose(
+            timeline("parent", 0, calls(
+                    call(0, NOON, 20_000, 0, Duration.ofHours(1)),
+                    call(1, sixMinutesLater, 44_828, 5_364, Duration.ofHours(1))),
+                    List.of(), 0, 0),
+            report("parent", 2, 2));
+    if (anHour.stream().anyMatch(finding -> "idle-gap".equals(finding.kind())))
+        throw new AssertionError("R2.9 — six minutes is within an hour: " + anHour);
+
+    var pastTheHour = diagnose(
+            timeline("parent", 0, calls(
+                    call(0, NOON, 20_000, 0, Duration.ofHours(1)),
+                    call(1, NOON.plusSeconds(2).plus(Duration.ofMinutes(61)), 0, 68_789, Duration.ofHours(1))),
+                    List.of(), 0, 0),
+            report("parent", 2, 2));
+    if (!of("idle-gap", pastTheHour).evidence().contains("cache TTL is 60m 00s"))
+        throw new AssertionError("R2.9 — the recorded TTL must be the one reported: " + of("idle-gap", pastTheHour));
+
+    var unrecorded = diagnose(
+            timeline("parent", 0, calls(
+                    call(0, NOON, 20_000, 0),
+                    call(1, sixMinutesLater, 0, 68_789)),
+                    List.of(), 0, 0),
+            report("parent", 2, 2));
+    if (!of("idle-gap", unrecorded).evidence().contains("assumed 5m 00s"))
+        throw new AssertionError("R2.9 — a default standing in for a missing TTL must say so: " + of("idle-gap", unrecorded));
 }
 
 // R2.2 — a tool that ran the length of the gap names the cause: an unanswered question and a
@@ -258,7 +291,11 @@ ToolCall toolCall(int iteration, String toolName, int resultSize, Instant starte
 }
 
 Call call(int iteration, Instant started, int cacheRead, int cacheCreation) {
-    return new Call("run", started, started.plusSeconds(2), iteration, cacheRead, cacheCreation);
+    return new Call("run", started, started.plusSeconds(2), iteration, cacheRead, cacheCreation, Duration.ZERO);
+}
+
+Call call(int iteration, Instant started, int cacheRead, int cacheCreation, Duration cacheTtl) {
+    return new Call("run", started, started.plusSeconds(2), iteration, cacheRead, cacheCreation, cacheTtl);
 }
 
 RunReport report(String runId, int turns, int toolCalls) {

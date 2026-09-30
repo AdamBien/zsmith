@@ -4,6 +4,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UncheckedIOException;
+import java.util.concurrent.locks.ReentrantLock;
 
 import airhacks.zsmith.logging.control.Log;
 
@@ -11,10 +12,21 @@ public class Console {
 
     static BufferedReader stdin;
 
+    /// One question at a time. Tools of the same turn run beside each other, and two of them
+    /// asking at once would leave the user typing an answer without knowing which question
+    /// receives it. A lock rather than `synchronized`: the wait lasts as long as a person
+    /// takes to answer, and the waiting tools are on virtual threads.
+    static final ReentrantLock ASKING = new ReentrantLock();
+
     public static String prompt(String message) {
-        Log.user(message);
-        var line = readLine();
-        return line == null ? "" : line.trim();
+        ASKING.lock();
+        try {
+            Log.user(message);
+            var line = readLine();
+            return line == null ? "" : line.trim();
+        } finally {
+            ASKING.unlock();
+        }
     }
 
     /// System.console() is null when stdin/stdout are redirected (pipes, CI, child

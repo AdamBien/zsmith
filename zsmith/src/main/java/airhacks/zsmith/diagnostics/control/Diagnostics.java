@@ -25,8 +25,9 @@ import airhacks.zsmith.telemetry.entity.RunReport;
 /// cannot distinguish a clean run from one nobody checked.
 public interface Diagnostics {
 
-    /// The prompt cache's time to live. A run whose own calls are spaced further apart than this
-    /// pays to re-create the prefix it could have read.
+    /// The prompt cache's time to live where a call does not say what it asked for: the API's
+    /// default. A run whose own calls are spaced further apart than its prefix lives pays to
+    /// re-create what it could have read.
     Duration CACHE_TTL = Duration.ofMinutes(5);
 
     /// Below this, a re-created prefix is not worth anyone's attention — a few hundred tokens of
@@ -81,24 +82,40 @@ public interface Diagnostics {
         var calls = timeline.calls();
         for (var index = 1; index < calls.size(); index++) {
             var call = calls.get(index);
-            var idle = call.since(calls.get(index - 1));
-            if (idle.compareTo(CACHE_TTL) > 0) {
+            var previous = calls.get(index - 1);
+            var idle = call.since(previous);
+            if (idle.compareTo(cacheTtl(previous)) > 0) {
                 findings.add(Finding.note(timeline.runId(), "idle-gap",
                         "the run was blocked longer than the prompt cache lives",
-                        "%s %s between turn %d and turn %d, cache TTL is %s".formatted(
-                                humanized(idle), blamed(timeline, calls.get(index - 1), call),
-                                calls.get(index - 1).iteration(), call.iteration(),
-                                humanized(CACHE_TTL))));
+                        "%s %s between turn %d and turn %d, cache TTL %s".formatted(
+                                humanized(idle), blamed(timeline, previous, call),
+                                previous.iteration(), call.iteration(),
+                                cacheTtlEvidence(previous))));
             }
             if (expired(call)) {
                 findings.add(Finding.warning(timeline.runId(), "cache-expired",
                         "the prefix was re-created at write price instead of read from cache",
                         "turn %d read 0 cached tokens and wrote %d after %s %s".formatted(
                                 call.iteration(), call.cacheCreation(), humanized(idle),
-                                blamed(timeline, calls.get(index - 1), call))));
+                                blamed(timeline, previous, call))));
             }
         }
         return findings;
+    }
+
+    /// The gap is measured against the call before it, because that call wrote the prefix the
+    /// next one hopes to read. A run given an hour is not blocked too long after six minutes.
+    static Duration cacheTtl(Call previous) {
+        return previous.knowsCacheTtl() ? previous.cacheTtl() : CACHE_TTL;
+    }
+
+    /// Says when the time to live is the default standing in for one the recording does not
+    /// carry: a verdict resting on an assumption has to show it.
+    static String cacheTtlEvidence(Call previous) {
+        if (previous.knowsCacheTtl()) {
+            return "is " + humanized(previous.cacheTtl());
+        }
+        return "assumed %s, the recording carries none".formatted(humanized(CACHE_TTL));
     }
 
     /// What held the window open, when the recording says. A tool that ran the length of the gap

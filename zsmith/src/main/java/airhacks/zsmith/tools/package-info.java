@@ -136,6 +136,7 @@
 /// - R15.1 — When a message is supplied, the BC shall present it and confirm it was shown.
 /// - R15.2 — When a question is supplied, the BC shall return the user's typed answer.
 /// - R15.3 — When a yes/no question is supplied, the BC shall return the user's decision.
+/// - R15.4 — While a question is waiting for an answer, the BC shall hold every other question back until it is answered. _(why: tools of one turn run beside each other, and two questions at once leave the user typing an answer without knowing which question receives it)_
 ///
 /// ### R16: Execute a process
 /// - R16.1 — When an executable script is named, the BC shall run it and return its combined output.

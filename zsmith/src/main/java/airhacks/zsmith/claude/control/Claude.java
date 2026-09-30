@@ -363,6 +363,7 @@ public interface Claude {
     static HttpResponse<String> sendInstrumented(String message, String model, int attempt) {
         var correlation = Correlations.current();
         var event = ClaudeAPICallEvent.of(correlation, model, attempt);
+        event.cacheTtlSeconds = (int) CacheControl.timeToLive().toSeconds();
         event.begin();
         var response = send(message);
         event.statusCode = response.statusCode();

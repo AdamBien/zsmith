@@ -712,7 +712,7 @@ Every rule is arithmetic over recorded fields — no model reads the recording. 
 | Finding | What it means |
 |---------|---------------|
 | `cache-expired` | A call read nothing from cache and re-created a significant prefix at write price. A run's *first* call never counts: it reads nothing from cache by definition, which is what separates a real expiry from a sub-agent starting cold. |
-| `idle-gap` | The run's own calls were spaced further apart than the prompt cache lives — the cause of which `cache-expired` is the effect. Names the tool that filled the stretch, where one did: a question nobody answered and a sub-agent still working are the same gap and not the same problem. |
+| `idle-gap` | The run's own calls were spaced further apart than the prompt cache lives — the cause of which `cache-expired` is the effect. Names the tool that filled the stretch, where one did: a question nobody answered and a sub-agent still working are the same gap and not the same problem. Judged against the cache TTL the call before the gap recorded (`cacheTtlSeconds` on `claude.APICall`); a recording without it is judged against the 5-minute default, and the finding says so. |
 | `context-carried` | What each tool left in the conversation, summed per tool and ranked by bytes times the turns that carried them. Judged on the carry, not on any one result: the largest single result is routinely not the largest cost. |
 | `batching` | How many tool calls the run got out of each turn that asked for any. Counted per turn, never by how the tools executed — concurrency is a property `Tool.parallel()` declares, so a run using only sequential tools has serialized nothing. |
 | `retries`, `tool-failures` | Straight from the run's report, keyed by what went wrong. |

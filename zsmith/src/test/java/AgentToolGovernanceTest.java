@@ -33,6 +33,7 @@ void main() throws Exception {
     try {
         governanceTable();
         parallelAndSequentialExecution();
+        sequentialToolsRunBesideParallelOnes();
     } finally {
         server.stop(0);
     }
@@ -174,4 +175,45 @@ void parallelAndSequentialExecution() {
     var results = followUp.getJSONObject(followUp.length() - 1).getJSONArray("content");
     if (results.length() != 3)
         throw new AssertionError("R3.5 — expected all 3 tool results returned to the LLM but got: " + results);
+}
+
+// R3.8 — While parallel-capable tools of a turn are running, the BC shall run the turn's
+// sequential tools, and shall return the turn's results only once both are done.
+void sequentialToolsRunBesideParallelOnes() throws Exception {
+    this.script.clear();
+    this.requests.clear();
+    var subAgentWorking = new java.util.concurrent.CountDownLatch(1);
+    var questionAnswered = new java.util.concurrent.CountDownLatch(1);
+    var slowParallel = Tool.of("slow_parallel", "a sub-agent at work", Tool.emptySchema(), input -> {
+        subAgentWorking.countDown();
+        try {
+            if (!questionAnswered.await(5, java.util.concurrent.TimeUnit.SECONDS))
+                return "finished without the question having been asked";
+        } catch (InterruptedException e) {
+            Thread.currentThread().interrupt();
+        }
+        return "research done";
+    }, true);
+    var question = Tool.of("question", "asks the user", input -> {
+        questionAnswered.countDown();
+        return "answered";
+    });
+
+    this.script.add(new StubResponse(200, toolUseTurn(
+            toolUseBlock("tu-p", "slow_parallel"),
+            toolUseBlock("tu-q", "question"))));
+    this.script.add(new StubResponse(200, textTurn("done")));
+    var agent = new Agent("governance-r38", "prompt").withTools(slowParallel, question);
+    agent.chat("run R3.8");
+
+    if (!subAgentWorking.await(0, java.util.concurrent.TimeUnit.SECONDS))
+        throw new AssertionError("R3.8 — the parallel tool never ran");
+    var followUp = this.requests.get(1).getJSONArray("messages");
+    var results = followUp.getJSONObject(followUp.length() - 1).getJSONArray("content");
+    if (results.length() != 2)
+        throw new AssertionError("R3.8 — expected both results in one message but got: " + results);
+    if (!"research done".equals(results.getJSONObject(0).getString("content")))
+        throw new AssertionError("R3.8 — the question must be answered while the parallel tool works: " + results);
+    if (!"tu-q".equals(results.getJSONObject(1).getString("tool_use_id")))
+        throw new AssertionError("R3.8 — results stay in plan order, parallel first: " + results);
 }
