@@ -24,6 +24,9 @@ public record Improvement(ArtifactKind artifact, String name, String observation
     public static final String SYSTEM_PROMPT = "system";
 
     public Improvement {
+        if (artifact == null) {
+            throw new IllegalArgumentException("Improvement artifact must be one of " + ArtifactKind.names());
+        }
         if (observation == null || observation.isBlank()) {
             throw new IllegalArgumentException("Improvement observation must not be empty");
         }
@@ -31,7 +34,7 @@ public record Improvement(ArtifactKind artifact, String name, String observation
             throw new IllegalArgumentException("Improvement trigger must not be empty");
         }
         if (name == null || name.isBlank()) {
-            name = SYSTEM_PROMPT;
+            name = defaultName(artifact);
         }
         if (suggestion == null) {
             suggestion = "";
@@ -39,6 +42,15 @@ public record Improvement(ArtifactKind artifact, String name, String observation
         if (timestamp == null) {
             timestamp = Instant.now().toString();
         }
+    }
+
+    /// Only the system prompt goes without a name; `system` for a skill or a tool would
+    /// point the reader at the wrong artifact.
+    static String defaultName(ArtifactKind artifact) {
+        if (artifact != ArtifactKind.prompt) {
+            throw new IllegalArgumentException("Improvement about a %s must name the %s".formatted(artifact, artifact));
+        }
+        return SYSTEM_PROMPT;
     }
 
     public static Improvement of(ArtifactKind artifact, String name, String observation, String trigger,
@@ -60,7 +72,7 @@ public record Improvement(ArtifactKind artifact, String name, String observation
 
     public SortedMap<String, String> toFields() {
         var fields = new TreeMap<String, String>();
-        fields.put(ARTIFACT, this.artifact == null ? "" : this.artifact.name());
+        fields.put(ARTIFACT, this.artifact.name());
         fields.put(NAME, this.name);
         fields.put(OBSERVATION, this.observation);
         fields.put(TRIGGER, this.trigger);

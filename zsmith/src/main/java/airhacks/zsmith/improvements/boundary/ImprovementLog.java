@@ -1,5 +1,7 @@
 package airhacks.zsmith.improvements.boundary;
 
+import static airhacks.zsmith.improvements.Requirement.Rn.*;
+
 import java.io.UncheckedIOException;
 import java.nio.file.Path;
 import java.time.Instant;
@@ -13,6 +15,7 @@ import java.util.Optional;
 
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.htmldb.boundary.HtmlStore;
+import airhacks.zsmith.improvements.Requirement;
 import airhacks.zsmith.improvements.entity.Improvement;
 import airhacks.zsmith.logging.control.Log;
 
@@ -32,12 +35,14 @@ public class ImprovementLog {
         this.improvements = new ArrayList<>(load());
     }
 
+    @Requirement(R4_1)
     public static ImprovementLog forAgent(String agentName) {
         return new ImprovementLog(ZCfg.agentDatabase(agentName));
     }
 
     /// Answers false when this gap is already on the backlog, so an agent hitting the
     /// same missing instruction in every turn reports it once.
+    @Requirement({ R1_1, R1_8, R1_9, R2_1, R2_2, R2_3, R4_2 })
     public boolean report(Improvement improvement) {
         if (alreadyReported(improvement)) {
             Log.memory("improvement already reported, skipped: " + improvement.headline());
@@ -52,12 +57,14 @@ public class ImprovementLog {
         return this.improvements.stream().anyMatch(improvement::isSameObservation);
     }
 
+    @Requirement(R3_1)
     public List<Improvement> all() {
         return this.improvements.stream()
                 .sorted(Comparator.comparing(Improvement::timestamp))
                 .toList();
     }
 
+    @Requirement(R5_1)
     public void clear() {
         this.improvements.clear();
         this.store.removeTable(IMPROVEMENTS_TABLE);
@@ -67,6 +74,7 @@ public class ImprovementLog {
         this.store.append(IMPROVEMENTS_TABLE, keyOf(improvement), improvement.toFields());
     }
 
+    @Requirement({ R3_2, R3_3 })
     List<Improvement> load() {
         return this.store.keys(IMPROVEMENTS_TABLE).stream()
                 .map(this::read)

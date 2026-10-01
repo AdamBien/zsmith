@@ -47,19 +47,19 @@ public class ReportImprovementTool implements Tool {
                         "prompt", "skill", "tool"),
                 Prop.string(Field.observation, "What the instruction failed to say, said ambiguously, or got wrong — not what you did about it"),
                 Prop.string(Field.trigger, "The concrete request, input or situation that exposed the gap"),
-                Prop.string(Field.name, "Name of the skill or tool. Use 'system' for the system prompt.").optional(),
+                Prop.string(Field.name, "Name of the skill or tool; required for both. Omit it, or use 'system', for the system prompt.").optional(),
                 Prop.string(Field.suggestion, "Optional concrete rewrite, only when you have one worth reading").optional()
         );
     }
 
     @Override
     public String execute(JSONObject input) {
-        var artifact = ArtifactKind.fromString(input.optString(Field.artifact.name(), null));
-        var name = input.optString(Field.name.name(), Improvement.SYSTEM_PROMPT);
+        var name = input.optString(Field.name.name(), null);
         var observation = input.optString(Field.observation.name(), null);
         var trigger = input.optString(Field.trigger.name(), null);
         var suggestion = input.optString(Field.suggestion.name(), "");
         try {
+            var artifact = ArtifactKind.fromString(input.optString(Field.artifact.name(), null));
             if (this.log.report(Improvement.of(artifact, name, observation, trigger, suggestion))) {
                 return "Reported for review.";
             }
