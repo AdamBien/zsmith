@@ -3,7 +3,7 @@ import java.nio.file.Path;
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.configuration.control.ZCfg;
-import airhacks.zsmith.subagent.control.SubAgentTool;
+import airhacks.zsmith.agent.control.SubAgentTool;
 
 void main() throws Exception {
     var child = new Agent("researcher", "You are a research assistant.");

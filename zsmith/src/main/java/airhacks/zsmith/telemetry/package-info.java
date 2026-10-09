@@ -66,7 +66,7 @@
 /// <!-- weighed and deliberately excluded -->
 /// - What a run should have done instead — the stream is what happened, never the counterfactual, and no amount of added telemetry would change that
 /// - The content of a run: prompts, tool inputs, error messages (`transcripts`, found by the same run identifier)
-/// - Emitting the events — every BC emits its own (`agent`, `tools`, `subagent`, `skills`, `episodicmemory`)
+/// - Emitting the events — every BC emits its own (`agent`, `tools`, `skills`, `episodicmemory`)
 /// - Deciding which LLM calls report usage — a transport reports what it received
 /// - Turning token counts into money
 /// - Displaying a run's progress while it runs (`agent`)

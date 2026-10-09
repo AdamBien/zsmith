@@ -11,7 +11,7 @@ import java.util.UUID;
 /// their own virtual threads, so `eventThread` identifies nothing and a time window
 /// is the only alternative — which stops working the moment two agents run in one JVM.
 ///
-/// `depth` lives here rather than in `subagent` because it is the same ambient
+/// `depth` lives here rather than beside the sub-agent dispatch in `agent` because it is the same ambient
 /// where-am-I context as the rest, and it has to survive the same thread hop.
 public record Correlation(String runId, int iteration, int depth) {
 

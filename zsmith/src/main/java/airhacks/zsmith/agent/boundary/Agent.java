@@ -12,6 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import airhacks.zsmith.json.JSONArray;
 
 import airhacks.zsmith.agent.control.ToolInvocations;
+import airhacks.zsmith.agent.control.SubAgentTool;
 import airhacks.zsmith.agent.control.Version;
 import airhacks.zsmith.agent.entity.AgentDefaults;
 import airhacks.zsmith.agent.entity.AgentTurnEvent;
@@ -39,7 +40,6 @@ import airhacks.zsmith.memory.entity.Memory;
 import airhacks.zsmith.memory.entity.Message;
 import airhacks.zsmith.skills.boundary.SkillStore;
 import airhacks.zsmith.skills.control.LoadSkillTool;
-import airhacks.zsmith.subagent.control.SubAgentTool;
 import airhacks.zsmith.systemprompt.control.SystemPromptLoader;
 import airhacks.zsmith.tools.boundary.SandboxTools;
 import airhacks.zsmith.tools.boundary.SandboxedFileSystem;

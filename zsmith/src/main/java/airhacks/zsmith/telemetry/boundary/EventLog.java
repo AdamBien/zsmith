@@ -10,10 +10,10 @@ import jdk.jfr.consumer.EventStream;
 import jdk.jfr.consumer.RecordingStream;
 
 import airhacks.zsmith.agent.entity.AgentTurnEvent;
+import airhacks.zsmith.agent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
-import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.telemetry.control.RunAggregator;
 import airhacks.zsmith.telemetry.entity.RunReport;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;

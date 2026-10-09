@@ -66,9 +66,19 @@
 /// ### R7: Report version
 /// - R7.1 — The BC shall report the framework version resolved from the packaged manifest or version file.
 ///
+/// ### R8: Delegate to a sub-agent
+/// - R8.1 — When a delegation is requested, the BC shall run the child agent's conversation one level deeper under the delegating run and return the child's replies. _(why: the child's turns must point back to the run that asked, or its events are orphaned)_
+/// - R8.2 — If the delegating run is already at the configured maximum depth, then the BC shall refuse the delegation with an error result. _(why: an agent that delegates to itself through a chain of children never terminates)_
+/// - R8.3 — If a delegation is requested without a task, then the BC shall refuse it with an error result naming the missing field.
+/// - R8.4 — If the child's conversation fails, then the BC shall convert the failure into an error result. _(why: same as R3.4 — the failure flows back to the parent's LLM, not out of the loop)_
+/// - R8.5 — When a delegation completes, the BC shall return everything the child wrote during it, in order, closed by its answer where the answer is not already recorded. _(why: a child that writes its result in the same turn as a tool call considers it delivered, and its closing turn is only a recap)_
+/// - R8.6 — While a child agent has never completed a delegation in this installation, the BC shall run delegations to it sequentially, and once one has completed, the BC shall run them in parallel where the delegation permits it. _(why: a first run asks the user to confirm tool permissions, and confirmations from several children at once interleave on the console)_
+/// - R8.7 — The BC shall emit an observable dispatch event for every delegation, carrying the delegating run, the child, the depth, the mode, and the outcome.
+///
 /// ## Entities
 /// - AgentDefaults — configurable fallbacks for name, system prompt, iteration limit, temperature
 /// - AgentTurnEvent — observable record of one loop iteration, carrying the run it belongs to
+/// - SubAgentDispatchEvent — observable record of one delegation to a child agent, carrying the delegating run and its depth
 ///
 /// ## Out of scope
 /// - LLM transport and API protocol (`llm`)
@@ -76,7 +86,6 @@
 /// - skill discovery and parsing (`skills`)
 /// - episodic memory persistence (`episodicmemory`)
 /// - HTTP server and session transport (`http`)
-/// - sub-agent dispatch mechanics (`subagent`)
 /// - the identity a run is recorded under and how it propagates (`correlation`)
 /// - transcript storage and its format (`transcripts`)
 /// - folding recorded events into per-run reports (`telemetry`) — the running tally this loop displays is read from that BC, never accumulated here

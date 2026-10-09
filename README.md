@@ -675,7 +675,7 @@ Open `calculator.jfr` in JDK Mission Control and filter the event browser by cat
 | `airhacks.zsmith.openai.APICall` | `zsmith / openai` | HTTP call to the OpenAI Chat Completions API with token usage |
 | `airhacks.zsmith.lightmetal.APICall` | `zsmith / lightmetal` | In-process GGUF generation call with token usage |
 | `airhacks.zsmith.tools.Invocation` | `zsmith / tools` | Single tool execution with outcome, result size, and failure type |
-| `airhacks.zsmith.subagent.Dispatch` | `zsmith / subagent` | Delegation to a sub-agent |
+| `airhacks.zsmith.agent.Dispatch` | `zsmith / agent` | Delegation to a sub-agent |
 | `airhacks.zsmith.skills.Load` | `zsmith / skills` | Skill read from disk during `SkillStore` init |
 | `airhacks.zsmith.memory.Access` | `zsmith / memory` | Read or write of a persistent memory store |
 

@@ -1,4 +1,4 @@
-package airhacks.zsmith.subagent.control;
+package airhacks.zsmith.agent.control;
 
 import java.io.IOException;
 import java.nio.file.Files;
@@ -10,11 +10,11 @@ import java.util.stream.Collectors;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
+import airhacks.zsmith.agent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.correlation.control.Correlations;
 import airhacks.zsmith.logging.control.Log;
 import airhacks.zsmith.memory.entity.Message;
-import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.tools.boundary.Tool;
 
 public class SubAgentTool implements Tool {

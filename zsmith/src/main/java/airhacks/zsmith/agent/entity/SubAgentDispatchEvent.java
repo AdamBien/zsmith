@@ -1,4 +1,4 @@
-package airhacks.zsmith.subagent.entity;
+package airhacks.zsmith.agent.entity;
 
 import jdk.jfr.Category;
 import jdk.jfr.Description;
@@ -13,13 +13,13 @@ import static airhacks.zsmith.Concern.Kind.OBSERVABILITY;
 @Concern(OBSERVABILITY)
 @Name(SubAgentDispatchEvent.NAME)
 @Label("Sub-Agent Dispatch")
-@Category({"zsmith", "subagent"})
+@Category({"zsmith", "agent"})
 @Description("Single delegation of a task to a sub-agent")
 public class SubAgentDispatchEvent extends Event {
 
     /// The registered event name, so consumers of the stream name it through the
     /// event that emits it rather than repeating a literal.
-    public static final String NAME = "airhacks.zsmith.subagent.Dispatch";
+    public static final String NAME = "airhacks.zsmith.agent.Dispatch";
 
     @Label("Run Id")
     @Description("The chat loop that delegated — the child's own turns point back to it as their parent run")

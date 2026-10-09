@@ -12,7 +12,7 @@ import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.agent.boundary.Agent;
-import airhacks.zsmith.subagent.control.SubAgentTool;
+import airhacks.zsmith.agent.control.SubAgentTool;
 import airhacks.zsmith.tools.boundary.Tool;
 
 /// A delegation returns everything the sub-agent wrote, not only its closing reply — traced

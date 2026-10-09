@@ -17,11 +17,11 @@ import jdk.jfr.consumer.RecordingStream;
 
 import airhacks.zsmith.agent.boundary.Agent;
 import airhacks.zsmith.agent.entity.AgentTurnEvent;
+import airhacks.zsmith.agent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.benchmark.control.LookupTool;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.json.JSONArray;
 import airhacks.zsmith.json.JSONObject;
-import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
 
 /// Traces agent spec R2.9, R3.6 and R3.7 — see src/main/java/airhacks/zsmith/agent/package-info.java

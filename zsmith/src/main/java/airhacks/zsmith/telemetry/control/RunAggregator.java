@@ -7,10 +7,10 @@ import java.util.function.Consumer;
 import jdk.jfr.consumer.RecordedEvent;
 
 import airhacks.zsmith.agent.entity.AgentTurnEvent;
+import airhacks.zsmith.agent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.claude.entity.ClaudeAPICallEvent;
 import airhacks.zsmith.lightmetal.entity.LightMetalAPICallEvent;
 import airhacks.zsmith.openai.entity.OpenAIAPICallEvent;
-import airhacks.zsmith.subagent.entity.SubAgentDispatchEvent;
 import airhacks.zsmith.telemetry.entity.RunReport;
 import airhacks.zsmith.telemetry.entity.TokenUsage;
 import airhacks.zsmith.tools.entity.ToolInvocationEvent;
