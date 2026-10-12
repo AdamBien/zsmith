@@ -5,6 +5,7 @@
 /// <!-- this system's concrete wiring, declared as it is confirmed; direction matters; each BC's own contract lives in its package-info -->
 /// - `lsp` may call `tools`: it fulfils tools' published tool contract; never the reverse. Path confinement stays inside `lsp`, since `tools` declares no path-resolution operation.
 /// - `transcripts`, `episodicmemory` and `improvements` may call `htmldb`: each keeps its records as pages of a store of its own. `htmldb` calls no other BC and knows none of its callers.
+/// - `llm` may call `fm`: it is one more provider a run can be configured for. `fm` may call `openai` for the wire format the two share; never the reverse.
 ///
 /// ## Decisions
 /// <!-- append-only confirmed choices with rejected alternatives; rationale, not contract — no test; supersede, never edit -->
