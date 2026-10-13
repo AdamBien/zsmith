@@ -5,6 +5,7 @@ import airhacks.zsmith.json.JSONObject;
 
 import airhacks.zsmith.claude.control.Claude;
 import airhacks.zsmith.configuration.control.ZCfg;
+import airhacks.zsmith.fm.boundary.Fm;
 import airhacks.zsmith.lightmetal.control.LightMetal;
 import airhacks.zsmith.llm.entity.LLMResponse;
 import airhacks.zsmith.llm.entity.ToolChoice;
@@ -36,6 +37,12 @@ public interface LLM {
             @Override
             public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice) {
                 return LightMetal.invoke(system, messages, tools, temperature, toolChoice);
+            }
+        },
+        FM {
+            @Override
+            public JSONObject invoke(String system, JSONArray messages, JSONArray tools, float temperature, ToolChoice toolChoice) {
+                return Fm.configured().invokeModel(system, messages, tools, temperature, toolChoice);
             }
         };
 
