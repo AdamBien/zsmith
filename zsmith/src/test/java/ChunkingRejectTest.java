@@ -3,7 +3,7 @@ import static airhacks.zsmith.chunking.Requirement.Rn.*;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import airhacks.zsmith.chunking.Requirement;
-import airhacks.zsmith.chunking.boundary.Chunking;
+import airhacks.zsmith.chunking.control.Chunking;
 import airhacks.zsmith.chunking.control.Model;
 import airhacks.zsmith.configuration.control.ZCfg;
 import airhacks.zsmith.json.JSONArray;

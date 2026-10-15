@@ -11,7 +11,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import jdk.jfr.consumer.RecordedEvent;
 import jdk.jfr.consumer.RecordingStream;
 
-import airhacks.zsmith.chunking.boundary.Chunking;
+import airhacks.zsmith.chunking.control.Chunking;
 import airhacks.zsmith.chunking.control.Model;
 import airhacks.zsmith.chunking.entity.ChunkProcessedEvent;
 import airhacks.zsmith.configuration.control.ZCfg;

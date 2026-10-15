@@ -1,10 +1,8 @@
-package airhacks.zsmith.chunking.boundary;
+package airhacks.zsmith.chunking.control;
 
 import static airhacks.zsmith.chunking.Requirement.Rn.*;
 
 import airhacks.zsmith.chunking.Requirement;
-import airhacks.zsmith.chunking.control.Model;
-import airhacks.zsmith.chunking.control.Splitter;
 import airhacks.zsmith.chunking.entity.Chunk;
 import airhacks.zsmith.chunking.entity.ChunkProcessedEvent;
 import airhacks.zsmith.configuration.control.ZCfg;
