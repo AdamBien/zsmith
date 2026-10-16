@@ -13,12 +13,12 @@ import airhacks.zsmith.fm.boundary.Fm;
 /// `lightmetal.jar` is deliberately left off the classpath — when present, it overrides
 /// `llm.provider`.
 ///
-/// Usage: ./onDevice [file] — defaults to README.md
+/// Usage: ./macOSfm [file] — defaults to README.md
 void main(String... args) throws Exception {
 
 var file = Path.of(args.length > 0 ? args[0] : "README.md");
 
-var onDevice = new Agent("onDevice", """
+var macOSfm = new Agent("macOSfm", """
 Summarize the text you are given in three short bullet points.
 Answer with the bullet points only.
 """);
@@ -29,5 +29,5 @@ if (!availability.available()) {
     return;
 }
 
-IO.println(onDevice.chat(Files.readString(file)));
+IO.println(macOSfm.chat(Files.readString(file)));
 }
