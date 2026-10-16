@@ -1,0 +1,33 @@
+#!/usr/bin/java --enable-native-access=ALL-UNNAMED --class-path=../zsmith/zbo/zsmith.jar -Dllm.provider=fm --source 25
+
+import java.nio.file.Files;
+import java.nio.file.Path;
+
+import airhacks.zsmith.agent.boundary.Agent;
+import airhacks.zsmith.fm.boundary.Fm;
+
+/// Summarizes a local file on the on-device Apple Foundation Model: no API key, no
+/// network, the text never leaves the machine. zsmith starts `fm serve` on a free
+/// localhost port with the first turn and stops it when the script ends.
+///
+/// `lightmetal.jar` is deliberately left off the classpath — when present, it overrides
+/// `llm.provider`.
+///
+/// Usage: ./onDevice [file] — defaults to README.md
+void main(String... args) throws Exception {
+
+var file = Path.of(args.length > 0 ? args[0] : "README.md");
+
+var onDevice = new Agent("onDevice", """
+Summarize the text you are given in three short bullet points.
+Answer with the bullet points only.
+""");
+
+var availability = Fm.configured().checkAvailability();
+if (!availability.available()) {
+    IO.println("on-device model unavailable: " + availability.reason());
+    return;
+}
+
+IO.println(onDevice.chat(Files.readString(file)));
+}
